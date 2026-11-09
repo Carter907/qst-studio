@@ -1,0 +1,188 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+:root {
+  /* Linear / Vercel Dark Monochrome Palette */
+  --bg-primary: #000000;
+  --bg-surface: #09090b;
+  --bg-card: #121215;
+  --bg-card-hover: #18181b;
+  --bg-elevated: #27272a;
+  
+  --border-color: #27272a;
+  --border-subtle: #18181b;
+  --border-focus: #52525b;
+  --border-bright: #ffffff;
+  
+  --text-main: #ffffff;
+  --text-muted: #a1a1aa;
+  --text-dim: #71717a;
+  --text-dark: #000000;
+  
+  --accent-white: #ffffff;
+  --accent-silver: #e4e4e7;
+  --accent-gray: #71717a;
+  --accent-danger: #ef4444;
+
+  --selection-bg: rgba(255, 255, 255, 0.08);
+  --active-border: #ffffff;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  width: 100vw;
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", "Helvetica Neue", sans-serif;
+  overflow: hidden;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* Custom Scrollbars in Monochrome */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-focus);
+}
+
+/* Monochrome Rendered Markdown & KaTeX Typography */
+.qst-prose {
+  color: var(--text-muted);
+  font-size: 13.5px;
+  line-height: 1.65;
+  user-select: text;
+}
+.qst-prose > *:first-child {
+  margin-top: 0;
+}
+.qst-prose > *:last-child {
+  margin-bottom: 0;
+}
+.qst-prose h1,
+.qst-prose h2,
+.qst-prose h3,
+.qst-prose h4 {
+  color: var(--text-main);
+  font-weight: 700;
+  letter-spacing: -0.25px;
+  margin: 0.4em 0 0.35em 0;
+  line-height: 1.3;
+}
+.qst-prose h1 { font-size: 18px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
+.qst-prose h2 { font-size: 15.5px; }
+.qst-prose h3 { font-size: 14px; }
+.qst-prose p {
+  margin: 0.35em 0;
+}
+.qst-prose strong {
+  color: var(--text-main);
+  font-weight: 600;
+}
+.qst-prose em {
+  color: var(--accent-silver);
+}
+.qst-prose ul,
+.qst-prose ol {
+  margin: 0.35em 0;
+  padding-left: 20px;
+}
+.qst-prose li {
+  margin: 0.2em 0;
+}
+.qst-prose blockquote {
+  margin: 0.5em 0;
+  padding: 6px 12px;
+  border-left: 2px solid var(--accent-white);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  border-radius: 0 4px 4px 0;
+}
+.qst-prose code,
+.qst-inline-md code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9em;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.qst-prose pre {
+  margin: 0.5em 0;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  overflow-x: auto;
+}
+.qst-prose pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--accent-silver);
+}
+.qst-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.6em 0;
+  font-size: 12px;
+}
+.qst-prose th,
+.qst-prose td {
+  border: 1px solid var(--border-color);
+  padding: 6px 10px;
+  text-align: left;
+}
+.qst-prose th {
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-weight: 600;
+}
+.qst-math-block {
+  margin: 8px 0;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  overflow-x: auto;
+  text-align: center;
+  color: var(--text-main);
+}
+.qst-math-inline {
+  color: var(--text-main);
+}
+.katex {
+  font-size: 1.04em !important;
+  color: var(--text-main);
+}
