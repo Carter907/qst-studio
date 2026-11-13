@@ -45,8 +45,21 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {
-            choco install nsis -y
+          $nsisCmd = Get-Command makensis -ErrorAction SilentlyContinue
+          if (-not $nsisCmd) {
+            $candidates = @(
+              "${env:ProgramFiles(x86)}\NSIS\makensis.exe",
+              "$env:ProgramFiles\NSIS\makensis.exe"
+            )
+            $found = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+            if (-not $found) {
+              choco install nsis -y --no-progress
+              $found = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+            }
+            if (-not $found) {
+              throw "makensis.exe could not be found after installing NSIS"
+            }
+            (Split-Path -Parent $found) | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           }
 
       - name: Install Wails CLI
@@ -83,7 +96,8 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          wails build -clean -nsis
+          makensis -VERSION
+          wails build -clean -nsis -v 2
           New-Item -ItemType Directory -Force -Path dist-release, staging | Out-Null
           Copy-Item build/bin/qst-studio-amd64-installer.exe dist-release/qst-studio-windows-amd64-installer.exe
           Copy-Item build/bin/qst-studio.exe, LICENSE, README.md staging/
