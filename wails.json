@@ -7,6 +7,13 @@
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
   "build:tags": "webkit2_41",
+  "info": {
+    "companyName": "Carter",
+    "productName": "Quest Studio",
+    "productVersion": "0.1.0",
+    "copyright": "Copyright © 2026 Carter. Licensed under GPL-3.0-or-later.",
+    "comments": "Desktop studio for Quest knowledge graphs and question banks"
+  },
   "author": {
     "name": "Carter",
     "email": "speers.carter@gmail.com"
