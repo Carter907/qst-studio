@@ -144,6 +144,11 @@ input, textarea, select {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   color: var(--text-muted);
+  flex-shrink: 0;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .active-scope-pill {
   background: var(--bg-card);

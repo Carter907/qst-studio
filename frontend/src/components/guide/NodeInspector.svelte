@@ -46,8 +46,8 @@
         <!-- Summary Card -->
         <div class="inspector-summary-card">
           <div class="inspector-title-row">
-            <h3 class="inspector-title">{studio.selectedGuide.id}</h3>
-            <span class="scope-pill active-scope-pill">{studio.selectedGuide.scope}</span>
+            <h3 class="inspector-title" title={studio.selectedGuide.id}>{studio.selectedGuide.id}</h3>
+            <span class="scope-pill active-scope-pill" title={studio.selectedGuide.scope}>{studio.selectedGuide.scope}</span>
           </div>
           <div class="inspector-meta-row">
             <span>{studio.selectedGuide.line_count} lines</span>
@@ -234,17 +234,24 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-width: 0;
   }
   .inspector-title-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 8px;
+    min-width: 0;
   }
   .inspector-title {
     margin: 0;
     font-size: 14px;
     font-weight: 600;
     color: var(--text-main);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .inspector-meta-row {
     font-size: 11px;
