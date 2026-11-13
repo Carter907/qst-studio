@@ -15,7 +15,7 @@ import {
   GetPracticeHistory,
   RecordPracticeAttempt
 } from '../wailsjs/go/main/App.js';
-import type { graph, practice, quiz } from '../wailsjs/go/models';
+import { quiz, type graph, type practice } from '../wailsjs/go/models';
 import {
   type RightTab,
   type PracticeScope,
@@ -81,6 +81,8 @@ class StudioState {
   practiceHistory = $state<Record<string, practice.PracticeRecordDTO>>({});
   practiceScope = $state<PracticeScope>('guide');
   practiceAnchorGuideId = $state<string>('');
+  practiceTourName = $state<string>('');
+  practiceFilterScopes = $state<string[]>([]);
   practiceDeck = $state<quiz.QuizItemDTO[]>([]);
   practiceIndex = $state<number>(0);
   practiceSessionScore = $state<{ correct: number; total: number }>({ correct: 0, total: 0 });
@@ -162,6 +164,11 @@ class StudioState {
       this.statusMessage = 'Loading graph...';
       this.graphDir = dir;
       this.graph = await LoadGraph(dir);
+      this.practiceFilterScopes = [];
+      this.practiceTourName = this.graph?.tours?.[0]?.name || '';
+      if (this.practiceScope === 'tour' && (!this.graph?.tours || this.graph.tours.length === 0)) {
+        this.practiceScope = 'guide';
+      }
       await this.loadRecents();
       await this.loadPracticeHistory();
       if (this.graph && this.graph.guides.length > 0) {
@@ -254,7 +261,12 @@ class StudioState {
       this.learningPath = await GetLearningPath(this.graphDir, id);
 
       // Rebuild guide-anchored practice decks when user manually switches guides
-      if (!preservePractice && this.activeRightTab === 'practice' && this.practiceScope !== 'graph') {
+      if (
+        !preservePractice &&
+        this.activeRightTab === 'practice' &&
+        this.practiceScope !== 'graph' &&
+        this.practiceScope !== 'tour'
+      ) {
         await this.buildPracticeDeck(this.practiceScope, id);
       }
     } catch (err: any) {
@@ -326,19 +338,34 @@ class StudioState {
     this.practiceResult = null;
     this.practiceSessionScore = { correct: 0, total: 0 };
 
+    if (scope === 'tour') {
+      const tours = this.graph?.tours || [];
+      if (!tours.some(t => t.name === this.practiceTourName)) {
+        this.practiceTourName = tours[0]?.name || '';
+      }
+    }
+
     const anchor = anchorGuideId ?? (this.practiceAnchorGuideId || this.selectedGuideId);
-    if (scope !== 'graph' && anchor) {
+    if (scope !== 'graph' && scope !== 'tour' && anchor) {
       this.practiceAnchorGuideId = anchor;
     }
 
-    if (scope === 'guide' && anchor === this.selectedGuideId) {
+    if (scope === 'guide' && anchor === this.selectedGuideId && this.practiceFilterScopes.length === 0) {
       this.practiceDeck = [...this.quizItems];
-    } else if (this.graphDir && (scope === 'graph' || anchor)) {
+    } else if (this.graphDir && (scope === 'graph' || (scope === 'tour' && !!this.practiceTourName) || !!anchor)) {
       try {
-        this.practiceDeck = await GetPracticeDeck(this.graphDir, scope, anchor);
+        this.practiceDeck = await GetPracticeDeck(
+          this.graphDir,
+          quiz.PracticeDeckOptions.createFrom({
+            scope,
+            anchor_guide_id: anchor || '',
+            tour_name: this.practiceTourName || '',
+            filter_scopes: [...this.practiceFilterScopes]
+          })
+        );
       } catch (err: any) {
         this.statusMessage = `Practice deck error: ${err}`;
-        this.practiceDeck = scope === 'guide' ? [...this.quizItems] : [];
+        this.practiceDeck = scope === 'guide' && this.practiceFilterScopes.length === 0 ? [...this.quizItems] : [];
       }
     } else {
       this.practiceDeck = [];
@@ -346,6 +373,26 @@ class StudioState {
 
     this.resetPracticeCardAnswer();
     await this.syncPracticeCardAnchor();
+  }
+
+  async selectPracticeTour(tourName: string) {
+    this.practiceTourName = tourName;
+    await this.buildPracticeDeck('tour');
+  }
+
+  async togglePracticeScopeFilter(scopeName: string) {
+    if (this.practiceFilterScopes.includes(scopeName)) {
+      this.practiceFilterScopes = this.practiceFilterScopes.filter(s => s !== scopeName);
+    } else {
+      this.practiceFilterScopes = [...this.practiceFilterScopes, scopeName];
+    }
+    await this.buildPracticeDeck(this.practiceScope);
+  }
+
+  async clearPracticeScopeFilters() {
+    if (this.practiceFilterScopes.length === 0) return;
+    this.practiceFilterScopes = [];
+    await this.buildPracticeDeck(this.practiceScope);
   }
 
   async syncPracticeCardAnchor() {

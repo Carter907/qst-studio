@@ -226,6 +226,24 @@ export namespace quiz {
 	        this.target = source["target"];
 	    }
 	}
+	export class PracticeDeckOptions {
+	    scope: string;
+	    anchor_guide_id: string;
+	    tour_name: string;
+	    filter_scopes: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new PracticeDeckOptions(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.scope = source["scope"];
+	        this.anchor_guide_id = source["anchor_guide_id"];
+	        this.tour_name = source["tour_name"];
+	        this.filter_scopes = source["filter_scopes"];
+	    }
+	}
 	export class QuizChoiceDTO {
 	    id: string;
 	    text: string;

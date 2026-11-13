@@ -35,6 +35,16 @@
       >
         Path
       </button>
+      {#if studio.graph?.tours && studio.graph.tours.length > 0}
+        <button
+          type="button"
+          class="scope-btn {studio.practiceScope === 'tour' ? 'active' : ''}"
+          onclick={() => studio.buildPracticeDeck('tour')}
+          title="Practice guides along a manifest tour"
+        >
+          Tour
+        </button>
+      {/if}
       <button
         type="button"
         class="scope-btn {studio.practiceScope === 'graph' ? 'active' : ''}"
@@ -48,6 +58,41 @@
     {#if (studio.practiceScope === 'subtree' || studio.practiceScope === 'learning_path') && studio.practiceAnchorGuideId}
       <div class="deck-anchor-label">
         {studio.practiceScope === 'subtree' ? `Subtree: ${studio.practiceAnchorGuideId}` : `Path → ${studio.practiceAnchorGuideId}`}
+      </div>
+    {/if}
+
+    {#if studio.practiceScope === 'tour' && studio.graph?.tours && studio.graph.tours.length > 0}
+      <select
+        class="tour-select"
+        value={studio.practiceTourName}
+        onchange={(e) => studio.selectPracticeTour(e.currentTarget.value)}
+        aria-label="Select tour"
+      >
+        {#each studio.graph.tours as tour}
+          <option value={tour.name}>{tour.name} ({tour.guides.length})</option>
+        {/each}
+      </select>
+    {/if}
+
+    {#if studio.graph?.scopes && studio.graph.scopes.length > 0}
+      <div class="scope-filter-row" aria-label="Filter by scope level">
+        <button
+          type="button"
+          class="scope-chip {studio.practiceFilterScopes.length === 0 ? 'active' : ''}"
+          onclick={() => studio.clearPracticeScopeFilters()}
+        >
+          All
+        </button>
+        {#each studio.graph.scopes as sc}
+          <button
+            type="button"
+            class="scope-chip {studio.practiceFilterScopes.includes(sc) ? 'active' : ''}"
+            onclick={() => studio.togglePracticeScopeFilter(sc)}
+            title="Toggle {sc} scope filter"
+          >
+            {sc}
+          </button>
+        {/each}
       </div>
     {/if}
 
@@ -75,7 +120,20 @@
 
   {#if studio.practiceDeck.length === 0}
     <div class="empty-practice-state">
-      <p>No questions found in this scope.</p>
+      <p>
+        {studio.practiceFilterScopes.length > 0
+          ? 'No questions match the selected scope filters.'
+          : 'No questions found in this scope.'}
+      </p>
+      {#if studio.practiceFilterScopes.length > 0}
+        <button
+          type="button"
+          class="btn btn-secondary btn-sm"
+          onclick={() => studio.clearPracticeScopeFilters()}
+        >
+          Clear Scope Filters
+        </button>
+      {/if}
       <button
         type="button"
         class="btn btn-secondary btn-sm"
@@ -231,6 +289,45 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .tour-select {
+    width: 100%;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 11px;
+    color: var(--text-main);
+  }
+  .tour-select:focus {
+    outline: none;
+    border-color: var(--border-focus);
+  }
+  .scope-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+  }
+  .scope-chip {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    color: var(--text-dim);
+    font-size: 9px;
+    text-transform: capitalize;
+    padding: 1px 5px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+  }
+  .scope-chip:hover {
+    color: var(--text-main);
+    border-color: var(--border-focus);
+  }
+  .scope-chip.active {
+    background: var(--accent-white);
+    color: var(--text-dark);
+    border-color: var(--accent-white);
+    font-weight: 600;
   }
   .deck-status-row {
     display: flex;

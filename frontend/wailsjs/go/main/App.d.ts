@@ -10,7 +10,7 @@ export function GetGuide(arg1:string,arg2:string):Promise<graph.GuideDetailDTO>;
 
 export function GetLearningPath(arg1:string,arg2:string):Promise<Array<string>>;
 
-export function GetPracticeDeck(arg1:string,arg2:string,arg3:string):Promise<Array<quiz.QuizItemDTO>>;
+export function GetPracticeDeck(arg1:string,arg2:quiz.PracticeDeckOptions):Promise<Array<quiz.QuizItemDTO>>;
 
 export function GetPracticeHistory(arg1:string):Promise<Record<string, practice.PracticeRecordDTO>>;
 

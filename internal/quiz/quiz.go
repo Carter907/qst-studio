@@ -118,6 +118,13 @@ type QuizBankFile struct {
 	Items     []QuizItemDTO `yaml:"items"`
 }
 
+type PracticeDeckOptions struct {
+	Scope         string   `json:"scope"`
+	AnchorGuideID string   `json:"anchor_guide_id"`
+	TourName      string   `json:"tour_name"`
+	FilterScopes  []string `json:"filter_scopes"`
+}
+
 func getItemsFilePath(dirPath string) string {
 	return filepath.Join(dirPath, "items.yaml")
 }
@@ -186,6 +193,36 @@ func GetItemsForGuides(dirPath string, guideIDs []string) ([]QuizItemDTO, error)
 		result = append(result, byGuide[gid]...)
 	}
 	return result, nil
+}
+
+// FilterItemsByScopes filters quiz items by allowed manifest scopes, falling back to guideScopes when item.Scope is empty.
+func FilterItemsByScopes(items []QuizItemDTO, allowedScopes []string, guideScopes map[string]string) []QuizItemDTO {
+	if len(allowedScopes) == 0 {
+		return items
+	}
+
+	allowed := make(map[string]bool, len(allowedScopes))
+	for _, sc := range allowedScopes {
+		trimmed := strings.TrimSpace(sc)
+		if trimmed != "" {
+			allowed[trimmed] = true
+		}
+	}
+	if len(allowed) == 0 {
+		return items
+	}
+
+	filtered := make([]QuizItemDTO, 0, len(items))
+	for _, item := range items {
+		effScope := strings.TrimSpace(item.Scope)
+		if effScope == "" && guideScopes != nil {
+			effScope = strings.TrimSpace(guideScopes[item.GuideID])
+		}
+		if allowed[effScope] {
+			filtered = append(filtered, item)
+		}
+	}
+	return filtered
 }
 
 // SaveItem validates and saves or updates a quiz item in items.yaml.

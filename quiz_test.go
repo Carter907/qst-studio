@@ -293,7 +293,7 @@ adherences: [strict]
 
 	// 2. Subtree deck preserves bottom-up guide order and items.yaml order within def_shared,
 	// even though lesson_root itself has 0 direct questions.
-	subtreeDeck, err := app.GetPracticeDeck(tmpDir, "subtree", "lesson_root")
+	subtreeDeck, err := app.GetPracticeDeck(tmpDir, PracticeDeckOptions{Scope: "subtree", AnchorGuideID: "lesson_root"})
 	if err != nil {
 		t.Fatalf("GetPracticeDeck(subtree) failed: %v", err)
 	}
@@ -307,7 +307,7 @@ adherences: [strict]
 	}
 
 	// 3. Learning-path deck follows prerequisites topologically: def_shared -> def_prereq_mid -> def_b.
-	pathDeck, err := app.GetPracticeDeck(tmpDir, "learning_path", "def_b")
+	pathDeck, err := app.GetPracticeDeck(tmpDir, PracticeDeckOptions{Scope: "learning_path", AnchorGuideID: "def_b"})
 	if err != nil {
 		t.Fatalf("GetPracticeDeck(learning_path) failed: %v", err)
 	}
@@ -321,15 +321,15 @@ adherences: [strict]
 	}
 
 	// 4. Guide & Graph scopes + unsupported scope error.
-	guideDeck, err := app.GetPracticeDeck(tmpDir, "guide", "def_shared")
+	guideDeck, err := app.GetPracticeDeck(tmpDir, PracticeDeckOptions{Scope: "guide", AnchorGuideID: "def_shared"})
 	if err != nil || len(guideDeck) != 2 {
 		t.Fatalf("GetPracticeDeck(guide) = %d items, err=%v", len(guideDeck), err)
 	}
-	graphDeck, err := app.GetPracticeDeck(tmpDir, "graph", "")
+	graphDeck, err := app.GetPracticeDeck(tmpDir, PracticeDeckOptions{Scope: "graph"})
 	if err != nil || len(graphDeck) != 7 {
 		t.Fatalf("GetPracticeDeck(graph) = %d items, err=%v", len(graphDeck), err)
 	}
-	if _, err := app.GetPracticeDeck(tmpDir, "unknown", "def_shared"); err == nil {
+	if _, err := app.GetPracticeDeck(tmpDir, PracticeDeckOptions{Scope: "unknown", AnchorGuideID: "def_shared"}); err == nil {
 		t.Fatal("expected error for unsupported practice scope")
 	}
 
@@ -340,5 +340,119 @@ adherences: [strict]
 	_ = os.WriteFile(filepath.Join(cycleDir, "guides", "b.md"), []byte("---\nscope: description\nsub_guides:\n  - guide: a\n---\n"), 0644)
 	if _, err := app.GetSubtreePath(cycleDir, "a"); err == nil {
 		t.Fatal("expected cycle error in GetSubtreePath")
+	}
+}
+
+func TestTourAndScopeLevelFiltering(t *testing.T) {
+	tmpDir := t.TempDir()
+	app := NewApp()
+
+	manifest := `title: Tour and Scope Test
+scopes: [definition, description, explanation]
+adherences: [strict]
+tours:
+  - name: Core Tour
+    guides: [exp_intro, missing_guide, def_basics, desc_flow]
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "manifest.yaml"), []byte(manifest), 0644); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+
+	guidesDir := filepath.Join(tmpDir, "guides")
+	if err := os.MkdirAll(guidesDir, 0755); err != nil {
+		t.Fatalf("mkdir guides: %v", err)
+	}
+
+	guides := map[string]string{
+		"def_basics.md": "---\nscope: definition\nprerequisites: []\nsub_guides: []\n---\n# Basics\n",
+		"desc_flow.md":  "---\nscope: description\nprerequisites: []\nsub_guides:\n  - guide: def_basics\n---\n# Flow\n",
+		"exp_intro.md":  "---\nscope: explanation\nprerequisites: []\nsub_guides:\n  - guide: desc_flow\n---\n# Intro\n",
+	}
+	for name, content := range guides {
+		if err := os.WriteFile(filepath.Join(guidesDir, name), []byte(content), 0644); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
+	}
+
+	items := []QuizItemDTO{
+		{ID: "Q_DEF_EXPLICIT", GuideID: "def_basics", Scope: "definition", Type: "essay", Prompt: "Def explicit"},
+		{ID: "Q_DEF_FALLBACK", GuideID: "def_basics", Scope: "", Type: "essay", Prompt: "Def fallback"},
+		{ID: "Q_DESC_1", GuideID: "desc_flow", Scope: "", Type: "essay", Prompt: "Desc fallback"},
+		{ID: "Q_EXP_1", GuideID: "exp_intro", Scope: "explanation", Type: "essay", Prompt: "Exp explicit"},
+	}
+	for _, it := range items {
+		if err := app.SaveQuizItem(tmpDir, it); err != nil {
+			t.Fatalf("SaveQuizItem %s: %v", it.ID, err)
+		}
+	}
+
+	// 1. Tour preserves manifest tour.guides order and skips missing guides cleanly.
+	tourDeck, err := app.GetPracticeDeck(tmpDir, PracticeDeckOptions{
+		Scope:    "tour",
+		TourName: "Core Tour",
+	})
+	if err != nil {
+		t.Fatalf("GetPracticeDeck(tour) failed: %v", err)
+	}
+	gotTourIDs := make([]string, len(tourDeck))
+	for i, it := range tourDeck {
+		gotTourIDs[i] = it.ID
+	}
+	wantTourIDs := []string{"Q_EXP_1", "Q_DEF_EXPLICIT", "Q_DEF_FALLBACK", "Q_DESC_1"}
+	if !reflect.DeepEqual(gotTourIDs, wantTourIDs) {
+		t.Fatalf("tour deck IDs = %v, want %v", gotTourIDs, wantTourIDs)
+	}
+
+	// 2. Unknown tour returns error.
+	if _, err := app.GetPracticeDeck(tmpDir, PracticeDeckOptions{Scope: "tour", TourName: "Does Not Exist"}); err == nil {
+		t.Fatal("expected error for unknown tour name")
+	}
+
+	// 3. Single and multi-scope filtering on tour & subtree, with fallback to guide frontmatter scope.
+	filteredTour, err := app.GetPracticeDeck(tmpDir, PracticeDeckOptions{
+		Scope:        "tour",
+		TourName:     "Core Tour",
+		FilterScopes: []string{"definition"},
+	})
+	if err != nil {
+		t.Fatalf("GetPracticeDeck(tour filtered) failed: %v", err)
+	}
+	gotFilteredTour := make([]string, len(filteredTour))
+	for i, it := range filteredTour {
+		gotFilteredTour[i] = it.ID
+	}
+	wantFilteredTour := []string{"Q_DEF_EXPLICIT", "Q_DEF_FALLBACK"}
+	if !reflect.DeepEqual(gotFilteredTour, wantFilteredTour) {
+		t.Fatalf("filtered tour IDs = %v, want %v", gotFilteredTour, wantFilteredTour)
+	}
+
+	filteredSubtree, err := app.GetPracticeDeck(tmpDir, PracticeDeckOptions{
+		Scope:         "subtree",
+		AnchorGuideID: "exp_intro",
+		FilterScopes:  []string{"description", "explanation"},
+	})
+	if err != nil {
+		t.Fatalf("GetPracticeDeck(subtree filtered) failed: %v", err)
+	}
+	gotFilteredSubtree := make([]string, len(filteredSubtree))
+	for i, it := range filteredSubtree {
+		gotFilteredSubtree[i] = it.ID
+	}
+	wantFilteredSubtree := []string{"Q_DESC_1", "Q_EXP_1"}
+	if !reflect.DeepEqual(gotFilteredSubtree, wantFilteredSubtree) {
+		t.Fatalf("filtered subtree IDs = %v, want %v", gotFilteredSubtree, wantFilteredSubtree)
+	}
+
+	// 4. Omitted scopes in manifest.yaml initializes to non-nil empty slice.
+	noScopesDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(noScopesDir, "manifest.yaml"), []byte("title: No Scopes\n"), 0644); err != nil {
+		t.Fatalf("write no-scopes manifest: %v", err)
+	}
+	loaded, err := app.LoadGraph(noScopesDir)
+	if err != nil {
+		t.Fatalf("LoadGraph(noScopesDir) failed: %v", err)
+	}
+	if loaded.Scopes == nil {
+		t.Fatal("expected non-nil empty Scopes slice when omitted from manifest.yaml")
 	}
 }

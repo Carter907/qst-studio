@@ -23,8 +23,9 @@ type (
 	QuizChoiceDTO     = quiz.QuizChoiceDTO
 	BlankDTO          = quiz.BlankDTO
 	MatchingPairDTO   = quiz.MatchingPairDTO
-	QuizItemDTO       = quiz.QuizItemDTO
-	PracticeRecordDTO = practice.PracticeRecordDTO
+	QuizItemDTO         = quiz.QuizItemDTO
+	PracticeDeckOptions = quiz.PracticeDeckOptions
+	PracticeRecordDTO   = practice.PracticeRecordDTO
 )
 
 // App struct bound to the Wails frontend.
@@ -91,31 +92,54 @@ func (a *App) GetSubtreePath(dirPath string, rootID string) ([]string, error) {
 	return graph.GetSubtreePath(dirPath, rootID)
 }
 
-// GetPracticeDeck resolves quiz items for the given scope ("guide", "subtree", "learning_path", or "graph").
-func (a *App) GetPracticeDeck(dirPath string, scope string, anchorGuideID string) ([]QuizItemDTO, error) {
-	switch scope {
+// GetPracticeDeck resolves quiz items for the requested deck options ("guide", "subtree", "learning_path", "tour", or "graph")
+// and optionally filters by manifest scope levels.
+func (a *App) GetPracticeDeck(dirPath string, opts PracticeDeckOptions) ([]QuizItemDTO, error) {
+	var items []QuizItemDTO
+	var err error
+
+	switch opts.Scope {
 	case "guide":
-		if strings.TrimSpace(anchorGuideID) == "" {
+		if strings.TrimSpace(opts.AnchorGuideID) == "" {
 			return []QuizItemDTO{}, nil
 		}
-		return quiz.GetItems(dirPath, anchorGuideID)
+		items, err = quiz.GetItems(dirPath, opts.AnchorGuideID)
 	case "subtree":
-		guideIDs, err := graph.GetSubtreePath(dirPath, anchorGuideID)
-		if err != nil {
-			return nil, err
+		var guideIDs []string
+		guideIDs, err = graph.GetSubtreePath(dirPath, opts.AnchorGuideID)
+		if err == nil {
+			items, err = quiz.GetItemsForGuides(dirPath, guideIDs)
 		}
-		return quiz.GetItemsForGuides(dirPath, guideIDs)
 	case "learning_path":
-		guideIDs, err := graph.GetLearningPath(dirPath, anchorGuideID)
-		if err != nil {
-			return nil, err
+		var guideIDs []string
+		guideIDs, err = graph.GetLearningPath(dirPath, opts.AnchorGuideID)
+		if err == nil {
+			items, err = quiz.GetItemsForGuides(dirPath, guideIDs)
 		}
-		return quiz.GetItemsForGuides(dirPath, guideIDs)
+	case "tour":
+		var guideIDs []string
+		guideIDs, err = graph.GetTourGuides(dirPath, opts.TourName)
+		if err == nil {
+			items, err = quiz.GetItemsForGuides(dirPath, guideIDs)
+		}
 	case "graph":
-		return quiz.GetItems(dirPath, "")
+		items, err = quiz.GetItems(dirPath, "")
 	default:
-		return nil, fmt.Errorf("unsupported practice scope: %q", scope)
+		return nil, fmt.Errorf("unsupported practice scope: %q", opts.Scope)
 	}
+	if err != nil {
+		return nil, err
+	}
+
+	if len(opts.FilterScopes) > 0 {
+		guideScopes, scopeErr := graph.GetGuideScopes(dirPath)
+		if scopeErr != nil {
+			return nil, scopeErr
+		}
+		items = quiz.FilterItemsByScopes(items, opts.FilterScopes, guideScopes)
+	}
+
+	return items, nil
 }
 
 // SaveGuideContent writes raw markdown content (frontmatter + body) directly to disk.

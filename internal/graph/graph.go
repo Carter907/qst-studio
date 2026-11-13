@@ -110,6 +110,36 @@ func GetSubtreePath(dirPath string, rootID string) ([]string, error) {
 	return computeSubtreePath(rootID, guidesMap)
 }
 
+// GetTourGuides returns the ordered guide IDs for the named tour in the manifest.
+func GetTourGuides(dirPath string, tourName string) ([]string, error) {
+	graph, err := parseManifest(dirPath)
+	if err != nil {
+		return nil, err
+	}
+	for _, tour := range graph.Tours {
+		if tour.Name == tourName {
+			if tour.Guides == nil {
+				return []string{}, nil
+			}
+			return tour.Guides, nil
+		}
+	}
+	return nil, fmt.Errorf("tour %q not found", tourName)
+}
+
+// GetGuideScopes returns a map of guide ID to frontmatter scope.
+func GetGuideScopes(dirPath string) (map[string]string, error) {
+	guidesMap, err := parseGraphDir(dirPath)
+	if err != nil {
+		return nil, err
+	}
+	scopes := make(map[string]string, len(guidesMap))
+	for id, g := range guidesMap {
+		scopes[id] = g.Scope
+	}
+	return scopes, nil
+}
+
 // SaveGuideContent writes raw markdown content (frontmatter + body) directly to disk.
 func SaveGuideContent(filePath string, rawContent string) error {
 	if filePath == "" {
@@ -135,6 +165,9 @@ func parseManifest(dirPath string) (*GraphDTO, error) {
 	var graph GraphDTO
 	if err := yaml.Unmarshal(data, &graph); err != nil {
 		return nil, fmt.Errorf("failed to parse manifest: %w", err)
+	}
+	if graph.Scopes == nil {
+		graph.Scopes = []string{}
 	}
 	if graph.Tours == nil {
 		graph.Tours = []TourDTO{}
