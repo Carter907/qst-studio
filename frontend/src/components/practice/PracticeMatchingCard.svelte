@@ -1,10 +1,10 @@
 <script lang="ts">
   import { studio } from '../../state.svelte';
-  import type { main } from '../../../wailsjs/go/models';
+  import type { quiz } from '../../../wailsjs/go/models';
 
-  let { card }: { card: main.QuizItemDTO } = $props();
+  let { card }: { card: quiz.QuizItemDTO } = $props();
 
-  function getAvailableMatchingTargets(item: main.QuizItemDTO): string[] {
+  function getAvailableMatchingTargets(item: quiz.QuizItemDTO): string[] {
     const set = new Set<string>();
     if (item.pairs) {
       for (const p of item.pairs) {

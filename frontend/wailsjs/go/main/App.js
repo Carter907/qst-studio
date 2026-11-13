@@ -14,6 +14,10 @@ export function GetLearningPath(arg1, arg2) {
   return window['go']['main']['App']['GetLearningPath'](arg1, arg2);
 }
 
+export function GetPracticeDeck(arg1, arg2, arg3) {
+  return window['go']['main']['App']['GetPracticeDeck'](arg1, arg2, arg3);
+}
+
 export function GetPracticeHistory(arg1) {
   return window['go']['main']['App']['GetPracticeHistory'](arg1);
 }
@@ -28,6 +32,10 @@ export function GetQuizItems(arg1, arg2) {
 
 export function GetRecentGraphs() {
   return window['go']['main']['App']['GetRecentGraphs']();
+}
+
+export function GetSubtreePath(arg1, arg2) {
+  return window['go']['main']['App']['GetSubtreePath'](arg1, arg2);
 }
 
 export function LoadGraph(arg1) {

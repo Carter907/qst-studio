@@ -160,6 +160,34 @@ func GetItems(dirPath string, guideID string) ([]QuizItemDTO, error) {
 	return filtered, nil
 }
 
+// GetItemsForGuides returns saved quiz items matching guideIDs, ordered by guideIDs then items.yaml order.
+func GetItemsForGuides(dirPath string, guideIDs []string) ([]QuizItemDTO, error) {
+	if len(guideIDs) == 0 {
+		return []QuizItemDTO{}, nil
+	}
+
+	allItems, err := GetItems(dirPath, "")
+	if err != nil {
+		return nil, err
+	}
+
+	byGuide := make(map[string][]QuizItemDTO)
+	for _, item := range allItems {
+		byGuide[item.GuideID] = append(byGuide[item.GuideID], item)
+	}
+
+	result := make([]QuizItemDTO, 0)
+	seen := make(map[string]bool, len(guideIDs))
+	for _, gid := range guideIDs {
+		if seen[gid] {
+			continue
+		}
+		seen[gid] = true
+		result = append(result, byGuide[gid]...)
+	}
+	return result, nil
+}
+
 // SaveItem validates and saves or updates a quiz item in items.yaml.
 func SaveItem(dirPath string, item QuizItemDTO) error {
 	if strings.TrimSpace(item.Prompt) == "" {

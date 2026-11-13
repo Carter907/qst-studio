@@ -1,23 +1,5 @@
-export namespace main {
+export namespace graph {
 	
-	export class BlankDTO {
-	    type: string;
-	    answers?: string[];
-	    options?: string[];
-	    correct?: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new BlankDTO(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.type = source["type"];
-	        this.answers = source["answers"];
-	        this.options = source["options"];
-	        this.correct = source["correct"];
-	    }
-	}
 	export class TourDTO {
 	    name: string;
 	    guides: string[];
@@ -179,20 +161,12 @@ export namespace main {
 		}
 	}
 	
-	export class MatchingPairDTO {
-	    prompt: string;
-	    target: string;
 	
-	    static createFrom(source: any = {}) {
-	        return new MatchingPairDTO(source);
-	    }
+
+}
+
+export namespace practice {
 	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.prompt = source["prompt"];
-	        this.target = source["target"];
-	    }
-	}
 	export class PracticeRecordDTO {
 	    item_id: string;
 	    guide_id: string;
@@ -213,6 +187,43 @@ export namespace main {
 	        this.correct = source["correct"];
 	        this.last_correct = source["last_correct"];
 	        this.last_practiced_at = source["last_practiced_at"];
+	    }
+	}
+
+}
+
+export namespace quiz {
+	
+	export class BlankDTO {
+	    type: string;
+	    answers?: string[];
+	    options?: string[];
+	    correct?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new BlankDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.type = source["type"];
+	        this.answers = source["answers"];
+	        this.options = source["options"];
+	        this.correct = source["correct"];
+	    }
+	}
+	export class MatchingPairDTO {
+	    prompt: string;
+	    target: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new MatchingPairDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.prompt = source["prompt"];
+	        this.target = source["target"];
 	    }
 	}
 	export class QuizChoiceDTO {
@@ -297,7 +308,6 @@ export namespace main {
 		    return a;
 		}
 	}
-	
 
 }
 

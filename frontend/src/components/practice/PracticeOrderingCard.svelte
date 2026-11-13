@@ -1,8 +1,8 @@
 <script lang="ts">
   import { studio } from '../../state.svelte';
-  import type { main } from '../../../wailsjs/go/models';
+  import type { quiz } from '../../../wailsjs/go/models';
 
-  let { card }: { card: main.QuizItemDTO } = $props();
+  let { card }: { card: quiz.QuizItemDTO } = $props();
 
   let draggedIndex = $state<number | null>(null);
   let dragOverIndex = $state<number | null>(null);

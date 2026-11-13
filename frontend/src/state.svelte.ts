@@ -6,6 +6,7 @@ import {
   LoadGraph,
   GetGuide,
   GetLearningPath,
+  GetPracticeDeck,
   GetQuizItems,
   SaveQuizItem,
   DeleteQuizItem,
@@ -14,9 +15,10 @@ import {
   GetPracticeHistory,
   RecordPracticeAttempt
 } from '../wailsjs/go/main/App.js';
-import type { main } from '../wailsjs/go/models';
+import type { graph, practice, quiz } from '../wailsjs/go/models';
 import {
   type RightTab,
+  type PracticeScope,
   type EditableChoice,
   type EditableBlank,
   type EditablePair,
@@ -28,12 +30,12 @@ import {
 import { initPracticeAnswer, gradePracticeAnswer } from './stores/practiceGrading';
 import { buildQuizItemPayload } from './stores/builderHelpers';
 
-export type { RightTab, EditableChoice, EditableBlank, EditablePair, BuilderNotice };
+export type { RightTab, PracticeScope, EditableChoice, EditableBlank, EditablePair, BuilderNotice };
 
 class StudioState {
   // Workspace State
   graphDir = $state('');
-  graph = $state<main.GraphDTO | null>(null);
+  graph = $state<graph.GraphDTO | null>(null);
   recentGraphs = $state<string[]>([]);
   leftPaneOpen = $state<boolean>(true);
   rightPaneOpen = $state<boolean>(true);
@@ -43,11 +45,11 @@ class StudioState {
 
   // Selected Guide & Navigator State
   selectedGuideId = $state<string>('');
-  selectedGuide = $state<main.GuideDetailDTO | null>(null);
+  selectedGuide = $state<graph.GuideDetailDTO | null>(null);
   guideBodyLines = $state<string[]>([]);
   guideRenderedBlocks = $state<RenderedGuideBlock[]>([]);
   learningPath = $state<string[]>([]);
-  quizItems = $state<main.QuizItemDTO[]>([]);
+  quizItems = $state<quiz.QuizItemDTO[]>([]);
 
   // Segment Anchoring
   startLine = $state<number | null>(null);
@@ -76,9 +78,10 @@ class StudioState {
   itemSolution = $state('');
 
   // Practice Runner State
-  practiceHistory = $state<Record<string, main.PracticeRecordDTO>>({});
-  practiceScope = $state<'guide' | 'graph'>('guide');
-  practiceDeck = $state<main.QuizItemDTO[]>([]);
+  practiceHistory = $state<Record<string, practice.PracticeRecordDTO>>({});
+  practiceScope = $state<PracticeScope>('guide');
+  practiceAnchorGuideId = $state<string>('');
+  practiceDeck = $state<quiz.QuizItemDTO[]>([]);
   practiceIndex = $state<number>(0);
   practiceSessionScore = $state<{ correct: number; total: number }>({ correct: 0, total: 0 });
   practiceAnswer = $state<any>({});
@@ -162,10 +165,13 @@ class StudioState {
       await this.loadRecents();
       await this.loadPracticeHistory();
       if (this.graph && this.graph.guides.length > 0) {
+        this.practiceAnchorGuideId = this.graph.guides[0].id;
         await this.selectGuide(this.graph.guides[0].id);
       } else {
         this.selectedGuideId = '';
         this.selectedGuide = null;
+        this.practiceAnchorGuideId = '';
+        this.practiceDeck = [];
       }
       this.statusMessage = `Loaded "${this.graph?.title}" (${this.graph?.guides.length} guides)`;
     } catch (err: any) {
@@ -233,8 +239,11 @@ class StudioState {
       this.startLine = null;
       this.endLine = null;
     }
-    if (guideChanged && !preservePractice) {
-      this.resetBuilderForm(true);
+    if (!preservePractice) {
+      this.practiceAnchorGuideId = id;
+      if (guideChanged) {
+        this.resetBuilderForm(true);
+      }
     }
 
     try {
@@ -244,9 +253,9 @@ class StudioState {
       this.quizItems = await GetQuizItems(this.graphDir, id);
       this.learningPath = await GetLearningPath(this.graphDir, id);
 
-      // Rebuild practice deck only if practice tab is active AND practice scope is 'guide' AND not preserving practice
-      if (!preservePractice && this.activeRightTab === 'practice' && this.practiceScope === 'guide') {
-        await this.buildPracticeDeck('guide');
+      // Rebuild guide-anchored practice decks when user manually switches guides
+      if (!preservePractice && this.activeRightTab === 'practice' && this.practiceScope !== 'graph') {
+        await this.buildPracticeDeck(this.practiceScope, id);
       }
     } catch (err: any) {
       this.statusMessage = `Failed to load guide: ${err}`;
@@ -304,27 +313,35 @@ class StudioState {
 
   // --- PRACTICE RUNNER METHODS ---
 
-  async openPracticeTab(scope: 'guide' | 'graph' = 'guide') {
+  async openPracticeTab(scope: PracticeScope = this.practiceScope, anchorGuideId?: string) {
     this.activeRightTab = 'practice';
     this.rightPaneOpen = true;
-    await this.buildPracticeDeck(scope);
+    await this.buildPracticeDeck(scope, anchorGuideId);
   }
 
-  async buildPracticeDeck(scope: 'guide' | 'graph') {
+  async buildPracticeDeck(scope: PracticeScope, anchorGuideId?: string) {
     this.practiceScope = scope;
     this.practiceIndex = 0;
     this.practiceChecked = false;
     this.practiceResult = null;
+    this.practiceSessionScore = { correct: 0, total: 0 };
 
-    if (scope === 'guide') {
+    const anchor = anchorGuideId ?? (this.practiceAnchorGuideId || this.selectedGuideId);
+    if (scope !== 'graph' && anchor) {
+      this.practiceAnchorGuideId = anchor;
+    }
+
+    if (scope === 'guide' && anchor === this.selectedGuideId) {
       this.practiceDeck = [...this.quizItems];
-    } else {
+    } else if (this.graphDir && (scope === 'graph' || anchor)) {
       try {
-        const allItems = await GetQuizItems(this.graphDir, '');
-        this.practiceDeck = allItems;
-      } catch {
-        this.practiceDeck = [...this.quizItems];
+        this.practiceDeck = await GetPracticeDeck(this.graphDir, scope, anchor);
+      } catch (err: any) {
+        this.statusMessage = `Practice deck error: ${err}`;
+        this.practiceDeck = scope === 'guide' ? [...this.quizItems] : [];
       }
+    } else {
+      this.practiceDeck = [];
     }
 
     this.resetPracticeCardAnswer();
@@ -339,8 +356,8 @@ class StudioState {
       return;
     }
 
-    // In whole-graph mode, if question belongs to a different guide, load that guide first
-    if (this.practiceScope === 'graph' && current.guide_id && current.guide_id !== this.selectedGuideId) {
+    // Ensure GuideViewer matches the active card's guide without altering practiceAnchorGuideId
+    if (current.guide_id && current.guide_id !== this.selectedGuideId) {
       await this.selectGuide(current.guide_id, { preservePractice: true, preserveAnchor: true });
     }
 
@@ -442,7 +459,7 @@ class StudioState {
     }
   }
 
-  loadBankItemIntoBuilder(item: main.QuizItemDTO) {
+  loadBankItemIntoBuilder(item: quiz.QuizItemDTO) {
     this.editingItemId = item.id;
     this.itemTitle = item.title || item.id;
     this.itemPrompt = item.prompt;

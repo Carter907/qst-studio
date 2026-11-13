@@ -1,9 +1,9 @@
 <script lang="ts">
   import { studio } from '../../state.svelte';
   import { renderMarkdownWithLatex } from '../../markdown';
-  import type { main } from '../../../wailsjs/go/models';
+  import type { quiz } from '../../../wailsjs/go/models';
 
-  let { card, qType }: { card: main.QuizItemDTO; qType: string } = $props();
+  let { card, qType }: { card: quiz.QuizItemDTO; qType: string } = $props();
 </script>
 
 <div class="practice-choices-list">

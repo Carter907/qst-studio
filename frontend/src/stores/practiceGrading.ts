@@ -1,4 +1,4 @@
-import type { main } from '../../wailsjs/go/models';
+import type { quiz } from '../../wailsjs/go/models';
 import { shuffleArray } from './types';
 
 export interface GradeResult {
@@ -11,7 +11,7 @@ export interface GradeResult {
  * Initializes the interactive answer state for a practice card, shuffling
  * choices, dropdown options, matching targets, or ordering items as needed.
  */
-export function initPracticeAnswer(card: main.QuizItemDTO): Record<string, any> {
+export function initPracticeAnswer(card: quiz.QuizItemDTO): Record<string, any> {
   const qType = card.type || 'multiple_choice';
 
   if (qType === 'multiple_choice') {
@@ -77,7 +77,7 @@ export function initPracticeAnswer(card: main.QuizItemDTO): Record<string, any> 
  * Grades a user's answer against a practice card.
  * Returns `{ selfGraded: true }` for essay items so the caller can reveal the rubric.
  */
-export function gradePracticeAnswer(card: main.QuizItemDTO, answer: Record<string, any>): GradeResult {
+export function gradePracticeAnswer(card: quiz.QuizItemDTO, answer: Record<string, any>): GradeResult {
   const qType = card.type || 'multiple_choice';
   let isCorrect = false;
   let feedback = card.feedback || '';

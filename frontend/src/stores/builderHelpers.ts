@@ -1,4 +1,4 @@
-import type { main } from '../../wailsjs/go/models';
+import type { graph, quiz } from '../../wailsjs/go/models';
 import type { EditableBlank, EditableChoice, EditablePair } from './types';
 
 export interface BuilderFormSnapshot {
@@ -17,14 +17,14 @@ export interface BuilderFormSnapshot {
 }
 
 export type BuildQuizItemResult =
-  | { ok: true; item: main.QuizItemDTO }
+  | { ok: true; item: quiz.QuizItemDTO }
   | { ok: false; error: string };
 
 /**
  * Validates the question builder form state and constructs a QuizItemDTO payload.
  */
 export function buildQuizItemPayload(
-  guide: main.GuideDetailDTO,
+  guide: graph.GuideDetailDTO,
   segment: string,
   form: BuilderFormSnapshot
 ): BuildQuizItemResult {
@@ -36,7 +36,7 @@ export function buildQuizItemPayload(
   const idToUse =
     form.editingItemId || `Q_${guide.id.toUpperCase()}_${Date.now().toString().slice(-4)}`;
 
-  const newItem: main.QuizItemDTO = {
+  const newItem: quiz.QuizItemDTO = {
     id: idToUse,
     title: form.itemTitle.trim() || `${guide.id} (${segment})`,
     guide_id: guide.id,
@@ -45,7 +45,7 @@ export function buildQuizItemPayload(
     type: form.itemType,
     prompt: trimmedPrompt,
     created_at: new Date().toISOString()
-  } as main.QuizItemDTO;
+  } as quiz.QuizItemDTO;
 
   if (
     form.itemType === 'multiple_choice' ||

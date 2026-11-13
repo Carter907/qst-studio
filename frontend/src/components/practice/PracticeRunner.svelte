@@ -15,17 +15,41 @@
         type="button"
         class="scope-btn {studio.practiceScope === 'guide' ? 'active' : ''}"
         onclick={() => studio.buildPracticeDeck('guide')}
+        title="Practice questions in the anchored guide"
       >
-        Current Guide
+        Guide
+      </button>
+      <button
+        type="button"
+        class="scope-btn {studio.practiceScope === 'subtree' ? 'active' : ''}"
+        onclick={() => studio.buildPracticeDeck('subtree')}
+        title="Practice recursive sub-guides bottom-up to this guide"
+      >
+        Subtree
+      </button>
+      <button
+        type="button"
+        class="scope-btn {studio.practiceScope === 'learning_path' ? 'active' : ''}"
+        onclick={() => studio.buildPracticeDeck('learning_path')}
+        title="Practice upstream prerequisites in topological order to this guide"
+      >
+        Path
       </button>
       <button
         type="button"
         class="scope-btn {studio.practiceScope === 'graph' ? 'active' : ''}"
         onclick={() => studio.buildPracticeDeck('graph')}
+        title="Practice all questions across the entire knowledge graph"
       >
-        Whole Graph
+        Graph
       </button>
     </div>
+
+    {#if (studio.practiceScope === 'subtree' || studio.practiceScope === 'learning_path') && studio.practiceAnchorGuideId}
+      <div class="deck-anchor-label">
+        {studio.practiceScope === 'subtree' ? `Subtree: ${studio.practiceAnchorGuideId}` : `Path → ${studio.practiceAnchorGuideId}`}
+      </div>
+    {/if}
 
     <div class="deck-status-row">
       {#if studio.practiceDeck.length > 0}
@@ -70,7 +94,7 @@
         {#if card.segment}
           <span class="segment-pill">Lines {card.segment}</span>
         {/if}
-        {#if studio.practiceScope === 'graph'}
+        {#if studio.practiceScope !== 'guide'}
           <span class="guide-tag">{card.guide_id}</span>
         {/if}
       </div>
@@ -199,6 +223,14 @@
     background: var(--accent-white);
     color: var(--text-dark);
     font-weight: 600;
+  }
+  .deck-anchor-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .deck-status-row {
     display: flex;

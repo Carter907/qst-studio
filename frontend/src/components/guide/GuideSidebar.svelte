@@ -1,11 +1,11 @@
 <script lang="ts">
   import { studio } from '../../state.svelte';
-  import type { main } from '../../../wailsjs/go/models';
+  import type { graph } from '../../../wailsjs/go/models';
 
   let selectedScope = $state<string>('all');
   let guideSearchQuery = $state<string>('');
 
-  function getFilteredGuides(): main.GuideSummaryDTO[] {
+  function getFilteredGuides(): graph.GuideSummaryDTO[] {
     if (!studio.graph) return [];
     const q = guideSearchQuery.trim().toLowerCase();
     return studio.graph.guides.filter(g => {

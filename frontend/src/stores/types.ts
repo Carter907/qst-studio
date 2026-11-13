@@ -1,4 +1,5 @@
 export type RightTab = 'inspector' | 'questions' | 'practice';
+export type PracticeScope = 'guide' | 'subtree' | 'learning_path' | 'graph';
 
 export interface EditableChoice {
   id: string;

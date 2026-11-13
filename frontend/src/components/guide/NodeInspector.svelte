@@ -24,7 +24,7 @@
       <button
         type="button"
         class="tab-btn {studio.activeRightTab === 'practice' ? 'active' : ''}"
-        onclick={() => studio.openPracticeTab('guide')}
+        onclick={() => studio.openPracticeTab()}
       >
         Practice
       </button>
@@ -62,9 +62,27 @@
             <button
               type="button"
               class="btn btn-primary btn-block"
-              onclick={() => studio.openPracticeTab('guide')}
+              onclick={() => studio.openPracticeTab('guide', studio.selectedGuide!.id)}
             >
               Practice Questions ({studio.quizItems.length}) →
+            </button>
+          {/if}
+          {#if studio.selectedGuide.sub_guides && studio.selectedGuide.sub_guides.length > 0}
+            <button
+              type="button"
+              class="btn btn-secondary btn-block"
+              onclick={() => studio.openPracticeTab('subtree', studio.selectedGuide!.id)}
+            >
+              Practice Subtree →
+            </button>
+          {/if}
+          {#if studio.selectedGuide.prerequisites && studio.selectedGuide.prerequisites.length > 0}
+            <button
+              type="button"
+              class="btn btn-secondary btn-block"
+              onclick={() => studio.openPracticeTab('learning_path', studio.selectedGuide!.id)}
+            >
+              Practice Learning Path →
             </button>
           {/if}
           <button

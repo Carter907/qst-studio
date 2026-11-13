@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"qst-studio/internal/graph"
 	"qst-studio/internal/practice"
@@ -82,6 +84,38 @@ func (a *App) GetGuide(dirPath string, guideID string) (*GuideDetailDTO, error) 
 // GetLearningPath computes the prerequisite sequence leading to a target guide.
 func (a *App) GetLearningPath(dirPath string, targetID string) ([]string, error) {
 	return graph.GetLearningPath(dirPath, targetID)
+}
+
+// GetSubtreePath computes the recursive sub-guide sequence bottom-up from foundational leaves to rootID.
+func (a *App) GetSubtreePath(dirPath string, rootID string) ([]string, error) {
+	return graph.GetSubtreePath(dirPath, rootID)
+}
+
+// GetPracticeDeck resolves quiz items for the given scope ("guide", "subtree", "learning_path", or "graph").
+func (a *App) GetPracticeDeck(dirPath string, scope string, anchorGuideID string) ([]QuizItemDTO, error) {
+	switch scope {
+	case "guide":
+		if strings.TrimSpace(anchorGuideID) == "" {
+			return []QuizItemDTO{}, nil
+		}
+		return quiz.GetItems(dirPath, anchorGuideID)
+	case "subtree":
+		guideIDs, err := graph.GetSubtreePath(dirPath, anchorGuideID)
+		if err != nil {
+			return nil, err
+		}
+		return quiz.GetItemsForGuides(dirPath, guideIDs)
+	case "learning_path":
+		guideIDs, err := graph.GetLearningPath(dirPath, anchorGuideID)
+		if err != nil {
+			return nil, err
+		}
+		return quiz.GetItemsForGuides(dirPath, guideIDs)
+	case "graph":
+		return quiz.GetItems(dirPath, "")
+	default:
+		return nil, fmt.Errorf("unsupported practice scope: %q", scope)
+	}
 }
 
 // SaveGuideContent writes raw markdown content (frontmatter + body) directly to disk.

@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -224,5 +225,120 @@ func TestPracticeHistory(t *testing.T) {
 	}
 	if nonExistent != nil {
 		t.Errorf("expected nil record for non-existent item, got %+v", nonExistent)
+	}
+}
+
+func TestSubtreeAndLearningPathPracticeDecks(t *testing.T) {
+	tmpDir := t.TempDir()
+	app := NewApp()
+
+	manifest := `title: Graph Deck Test
+scopes: [definition, description, explanation]
+adherences: [strict]
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "manifest.yaml"), []byte(manifest), 0644); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+
+	guidesDir := filepath.Join(tmpDir, "guides")
+	if err := os.MkdirAll(guidesDir, 0755); err != nil {
+		t.Fatalf("mkdir guides: %v", err)
+	}
+
+	// Subtree DAG:
+	//   lesson_root (explanation, 0 direct items) -> [desc_a, desc_b]
+	//   desc_a (description) -> [def_shared, def_a]
+	//   desc_b (description) -> [def_shared]
+	//   Prerequisites on def_b: [def_shared] -> [def_prereq_mid] -> [def_b]
+	files := map[string]string{
+		"def_shared.md": "---\nscope: definition\nprerequisites: []\nsub_guides: []\n---\n# Shared\nLine 1\n",
+		"def_a.md":      "---\nscope: definition\nprerequisites: []\nsub_guides: []\n---\n# Def A\nLine 1\n",
+		"desc_a.md": "---\nscope: description\nprerequisites: []\nsub_guides:\n  - guide: def_shared\n    adherence: strict\n    segment: \"1-1\"\n  - guide: def_a\n    adherence: strict\n    segment: \"1-1\"\n---\n# Desc A\nLine 1\n",
+		"desc_b.md": "---\nscope: description\nprerequisites: []\nsub_guides:\n  - guide: def_shared\n    adherence: strict\n    segment: \"1-1\"\n---\n# Desc B\nLine 1\n",
+		"lesson_root.md": "---\nscope: explanation\nprerequisites: []\nsub_guides:\n  - guide: desc_a\n    adherence: strict\n    segment: \"1-1\"\n  - guide: desc_b\n    adherence: strict\n    segment: \"1-1\"\n---\n# Lesson Root\nLine 1\n",
+		"def_prereq_mid.md": "---\nscope: definition\nprerequisites: [def_shared]\nsub_guides: []\n---\n# Mid\nLine 1\n",
+		"def_b.md":          "---\nscope: definition\nprerequisites: [def_prereq_mid]\nsub_guides: []\n---\n# Target\nLine 1\n",
+	}
+	for name, content := range files {
+		if err := os.WriteFile(filepath.Join(guidesDir, name), []byte(content), 0644); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
+	}
+
+	// Save quiz items in non-topological order to verify guide-order + intra-guide order preservation.
+	items := []QuizItemDTO{
+		{ID: "Q_DESCA_1", GuideID: "desc_a", Type: "essay", Prompt: "Desc A 1"},
+		{ID: "Q_SHARED_1", GuideID: "def_shared", Type: "essay", Prompt: "Shared 1"},
+		{ID: "Q_SHARED_2", GuideID: "def_shared", Type: "essay", Prompt: "Shared 2"},
+		{ID: "Q_DEFB_1", GuideID: "def_b", Type: "essay", Prompt: "Def B 1"},
+		{ID: "Q_DEFA_1", GuideID: "def_a", Type: "essay", Prompt: "Def A 1"},
+		{ID: "Q_MID_1", GuideID: "def_prereq_mid", Type: "essay", Prompt: "Mid 1"},
+		{ID: "Q_DESCB_1", GuideID: "desc_b", Type: "essay", Prompt: "Desc B 1"},
+	}
+	for _, it := range items {
+		if err := app.SaveQuizItem(tmpDir, it); err != nil {
+			t.Fatalf("SaveQuizItem %s: %v", it.ID, err)
+		}
+	}
+
+	// 1. Subtree path is bottom-up and deduplicates diamond descendant def_shared.
+	subtreePath, err := app.GetSubtreePath(tmpDir, "lesson_root")
+	if err != nil {
+		t.Fatalf("GetSubtreePath failed: %v", err)
+	}
+	wantSubtreePath := []string{"def_shared", "def_a", "desc_a", "desc_b", "lesson_root"}
+	if !reflect.DeepEqual(subtreePath, wantSubtreePath) {
+		t.Fatalf("GetSubtreePath = %v, want %v", subtreePath, wantSubtreePath)
+	}
+
+	// 2. Subtree deck preserves bottom-up guide order and items.yaml order within def_shared,
+	// even though lesson_root itself has 0 direct questions.
+	subtreeDeck, err := app.GetPracticeDeck(tmpDir, "subtree", "lesson_root")
+	if err != nil {
+		t.Fatalf("GetPracticeDeck(subtree) failed: %v", err)
+	}
+	gotSubtreeIDs := make([]string, len(subtreeDeck))
+	for i, it := range subtreeDeck {
+		gotSubtreeIDs[i] = it.ID
+	}
+	wantSubtreeIDs := []string{"Q_SHARED_1", "Q_SHARED_2", "Q_DEFA_1", "Q_DESCA_1", "Q_DESCB_1"}
+	if !reflect.DeepEqual(gotSubtreeIDs, wantSubtreeIDs) {
+		t.Fatalf("subtree deck IDs = %v, want %v", gotSubtreeIDs, wantSubtreeIDs)
+	}
+
+	// 3. Learning-path deck follows prerequisites topologically: def_shared -> def_prereq_mid -> def_b.
+	pathDeck, err := app.GetPracticeDeck(tmpDir, "learning_path", "def_b")
+	if err != nil {
+		t.Fatalf("GetPracticeDeck(learning_path) failed: %v", err)
+	}
+	gotPathIDs := make([]string, len(pathDeck))
+	for i, it := range pathDeck {
+		gotPathIDs[i] = it.ID
+	}
+	wantPathIDs := []string{"Q_SHARED_1", "Q_SHARED_2", "Q_MID_1", "Q_DEFB_1"}
+	if !reflect.DeepEqual(gotPathIDs, wantPathIDs) {
+		t.Fatalf("learning_path deck IDs = %v, want %v", gotPathIDs, wantPathIDs)
+	}
+
+	// 4. Guide & Graph scopes + unsupported scope error.
+	guideDeck, err := app.GetPracticeDeck(tmpDir, "guide", "def_shared")
+	if err != nil || len(guideDeck) != 2 {
+		t.Fatalf("GetPracticeDeck(guide) = %d items, err=%v", len(guideDeck), err)
+	}
+	graphDeck, err := app.GetPracticeDeck(tmpDir, "graph", "")
+	if err != nil || len(graphDeck) != 7 {
+		t.Fatalf("GetPracticeDeck(graph) = %d items, err=%v", len(graphDeck), err)
+	}
+	if _, err := app.GetPracticeDeck(tmpDir, "unknown", "def_shared"); err == nil {
+		t.Fatal("expected error for unsupported practice scope")
+	}
+
+	// 5. Subtree cycle detection.
+	cycleDir := t.TempDir()
+	_ = os.MkdirAll(filepath.Join(cycleDir, "guides"), 0755)
+	_ = os.WriteFile(filepath.Join(cycleDir, "guides", "a.md"), []byte("---\nscope: explanation\nsub_guides:\n  - guide: b\n---\n"), 0644)
+	_ = os.WriteFile(filepath.Join(cycleDir, "guides", "b.md"), []byte("---\nscope: description\nsub_guides:\n  - guide: a\n---\n"), 0644)
+	if _, err := app.GetSubtreePath(cycleDir, "a"); err == nil {
+		t.Fatal("expected cycle error in GetSubtreePath")
 	}
 }

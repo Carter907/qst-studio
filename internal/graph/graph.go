@@ -101,6 +101,15 @@ func GetLearningPath(dirPath string, targetID string) ([]string, error) {
 	return computePrerequisitePath(targetID, guidesMap)
 }
 
+// GetSubtreePath computes the recursive sub-guide sequence bottom-up from foundational leaves to rootID.
+func GetSubtreePath(dirPath string, rootID string) ([]string, error) {
+	guidesMap, err := parseGraphDir(dirPath)
+	if err != nil {
+		return nil, err
+	}
+	return computeSubtreePath(rootID, guidesMap)
+}
+
 // SaveGuideContent writes raw markdown content (frontmatter + body) directly to disk.
 func SaveGuideContent(filePath string, rawContent string) error {
 	if filePath == "" {
@@ -216,6 +225,29 @@ func parseGraphDir(dirPath string) (map[string]GuideDetailDTO, error) {
 
 // computePrerequisitePath finds all upstream prerequisites in topological order using DFS.
 func computePrerequisitePath(targetID string, guides map[string]GuideDetailDTO) ([]string, error) {
+	return computePostOrderPath(targetID, guides, func(g GuideDetailDTO) []string {
+		return g.Prerequisites
+	})
+}
+
+// computeSubtreePath collects a guide and all recursive sub-guides bottom-up using DFS.
+func computeSubtreePath(rootID string, guides map[string]GuideDetailDTO) ([]string, error) {
+	return computePostOrderPath(rootID, guides, func(g GuideDetailDTO) []string {
+		ids := make([]string, 0, len(g.SubGuides))
+		for _, sg := range g.SubGuides {
+			if strings.TrimSpace(sg.Guide) != "" {
+				ids = append(ids, sg.Guide)
+			}
+		}
+		return ids
+	})
+}
+
+func computePostOrderPath(startID string, guides map[string]GuideDetailDTO, nextIDs func(GuideDetailDTO) []string) ([]string, error) {
+	if strings.TrimSpace(startID) == "" {
+		return []string{}, nil
+	}
+
 	visited := make(map[string]bool)
 	inStack := make(map[string]bool)
 	var order []string
@@ -231,8 +263,8 @@ func computePrerequisitePath(targetID string, guides map[string]GuideDetailDTO) 
 
 		inStack[id] = true
 		if guide, exists := guides[id]; exists {
-			for _, prereq := range guide.Prerequisites {
-				if err := dfs(prereq); err != nil {
+			for _, next := range nextIDs(guide) {
+				if err := dfs(next); err != nil {
 					return err
 				}
 			}
@@ -244,7 +276,7 @@ func computePrerequisitePath(targetID string, guides map[string]GuideDetailDTO) 
 		return nil
 	}
 
-	if err := dfs(targetID); err != nil {
+	if err := dfs(startID); err != nil {
 		return nil, err
 	}
 	return order, nil

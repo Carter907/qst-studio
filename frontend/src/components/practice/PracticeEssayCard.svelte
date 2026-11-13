@@ -1,9 +1,9 @@
 <script lang="ts">
   import { studio } from '../../state.svelte';
   import { renderMarkdownWithLatex } from '../../markdown';
-  import type { main } from '../../../wailsjs/go/models';
+  import type { quiz } from '../../../wailsjs/go/models';
 
-  let { card }: { card: main.QuizItemDTO } = $props();
+  let { card }: { card: quiz.QuizItemDTO } = $props();
 </script>
 
 <div class="practice-essay-container">
