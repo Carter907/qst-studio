@@ -1,0 +1,19 @@
+package_id: intro-graph-assessments
+title: Intro Graph Question Bank
+items:
+  - id: Q_POINTERS_01
+    title: Address-of operator
+    guide_id: pointers
+    segment: 3-4
+    scope: explanation
+    type: multiple_choice
+    prompt: Which operator returns the memory address of a variable `x`?
+    choices:
+      - id: c1
+        text: "`&x`"
+        correct: true
+        feedback: "`&` is the address-of operator."
+      - id: c2
+        text: "`*x`"
+        correct: false
+        feedback: "`*` dereferences a pointer."

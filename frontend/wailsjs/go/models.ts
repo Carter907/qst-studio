@@ -1,37 +1,21 @@
 export namespace main {
 	
-	export class AgentConfigDTO {
-	    endpoint: string;
-	    model: string;
+	export class BlankDTO {
+	    type: string;
+	    answers?: string[];
+	    options?: string[];
+	    correct?: string;
 	
 	    static createFrom(source: any = {}) {
-	        return new AgentConfigDTO(source);
+	        return new BlankDTO(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.endpoint = source["endpoint"];
-	        this.model = source["model"];
-	    }
-	}
-	export class AgentStatusDTO {
-	    available: boolean;
-	    endpoint: string;
-	    active_model: string;
-	    models: string[];
-	    error?: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new AgentStatusDTO(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.available = source["available"];
-	        this.endpoint = source["endpoint"];
-	        this.active_model = source["active_model"];
-	        this.models = source["models"];
-	        this.error = source["error"];
+	        this.type = source["type"];
+	        this.answers = source["answers"];
+	        this.options = source["options"];
+	        this.correct = source["correct"];
 	    }
 	}
 	export class TourDTO {
@@ -195,50 +179,41 @@ export namespace main {
 		}
 	}
 	
-	export class LearnerMasteryDTO {
-	    guide_id: string;
-	    segment: string;
-	    p_mastery: number;
-	    stability_days: number;
-	    // Go type: time
-	    last_reviewed_at: any;
-	    due_for_review: boolean;
-	    attempts_count: number;
-	    correct_count: number;
+	export class MatchingPairDTO {
+	    prompt: string;
+	    target: string;
 	
 	    static createFrom(source: any = {}) {
-	        return new LearnerMasteryDTO(source);
+	        return new MatchingPairDTO(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.guide_id = source["guide_id"];
-	        this.segment = source["segment"];
-	        this.p_mastery = source["p_mastery"];
-	        this.stability_days = source["stability_days"];
-	        this.last_reviewed_at = this.convertValues(source["last_reviewed_at"], null);
-	        this.due_for_review = source["due_for_review"];
-	        this.attempts_count = source["attempts_count"];
-	        this.correct_count = source["correct_count"];
+	        this.prompt = source["prompt"];
+	        this.target = source["target"];
+	    }
+	}
+	export class PracticeRecordDTO {
+	    item_id: string;
+	    guide_id: string;
+	    attempts: number;
+	    correct: number;
+	    last_correct: boolean;
+	    last_practiced_at: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PracticeRecordDTO(source);
 	    }
 	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.item_id = source["item_id"];
+	        this.guide_id = source["guide_id"];
+	        this.attempts = source["attempts"];
+	        this.correct = source["correct"];
+	        this.last_correct = source["last_correct"];
+	        this.last_practiced_at = source["last_practiced_at"];
+	    }
 	}
 	export class QuizChoiceDTO {
 	    id: string;
@@ -265,8 +240,17 @@ export namespace main {
 	    segment: string;
 	    scope: string;
 	    type: string;
+	    points?: number;
 	    prompt: string;
-	    choices: QuizChoiceDTO[];
+	    feedback?: string;
+	    choices?: QuizChoiceDTO[];
+	    blanks?: Record<string, BlankDTO>;
+	    pairs?: MatchingPairDTO[];
+	    distractors?: string[];
+	    items?: string[];
+	    top_label?: string;
+	    bottom_label?: string;
+	    solution?: string;
 	    created_at?: string;
 	
 	    static createFrom(source: any = {}) {
@@ -281,8 +265,17 @@ export namespace main {
 	        this.segment = source["segment"];
 	        this.scope = source["scope"];
 	        this.type = source["type"];
+	        this.points = source["points"];
 	        this.prompt = source["prompt"];
+	        this.feedback = source["feedback"];
 	        this.choices = this.convertValues(source["choices"], QuizChoiceDTO);
+	        this.blanks = this.convertValues(source["blanks"], BlankDTO, true);
+	        this.pairs = this.convertValues(source["pairs"], MatchingPairDTO);
+	        this.distractors = source["distractors"];
+	        this.items = source["items"];
+	        this.top_label = source["top_label"];
+	        this.bottom_label = source["bottom_label"];
+	        this.solution = source["solution"];
 	        this.created_at = source["created_at"];
 	    }
 	
@@ -304,70 +297,6 @@ export namespace main {
 		    return a;
 		}
 	}
-	export class PracticeTurnDTO {
-	    item: QuizItemDTO;
-	    source: string;
-	    reason: string;
-	    linked_sub_guide: string;
-	    unmastered_prereq_id: string;
-	    target_mastery: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new PracticeTurnDTO(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.item = this.convertValues(source["item"], QuizItemDTO);
-	        this.source = source["source"];
-	        this.reason = source["reason"];
-	        this.linked_sub_guide = source["linked_sub_guide"];
-	        this.unmastered_prereq_id = source["unmastered_prereq_id"];
-	        this.target_mastery = source["target_mastery"];
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
-	}
-	export class PracticeTurnRequest {
-	    dir_path: string;
-	    mode: string;
-	    focus_guide_id: string;
-	    focus_segment: string;
-	    seen_item_ids: string[];
-	    exclude_guides: string[];
-	
-	    static createFrom(source: any = {}) {
-	        return new PracticeTurnRequest(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.dir_path = source["dir_path"];
-	        this.mode = source["mode"];
-	        this.focus_guide_id = source["focus_guide_id"];
-	        this.focus_segment = source["focus_segment"];
-	        this.seen_item_ids = source["seen_item_ids"];
-	        this.exclude_guides = source["exclude_guides"];
-	    }
-	}
-	
-	
 	
 
 }

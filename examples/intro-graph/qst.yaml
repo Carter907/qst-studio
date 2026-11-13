@@ -1,0 +1,14 @@
+title: Intro to Quest Graphs
+description: Minimal sample knowledge graph for testing qst-studio
+scopes:
+  - definition
+  - explanation
+  - lesson
+adherences:
+  - strict
+  - loose
+tours:
+  - name: Quick Tour
+    guides:
+      - variables
+      - pointers

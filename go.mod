@@ -39,5 +39,3 @@ require (
 )
 
 // replace github.com/wailsapp/wails/v2 v2.17.1 => /home/speer/go/pkg/mod
-
-replace github.com/Carter907/qst => /home/speer/Code/golang/qst
