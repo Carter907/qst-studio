@@ -49,3 +49,11 @@ export function shuffleArray<T>(items: T[]): T[] {
   }
   return copy;
 }
+
+/** Extracts the final directory name from a POSIX or Windows path. */
+export function getDirectoryName(dirPath: string): string {
+  const trimmed = dirPath.replace(/[/\\]+$/, '');
+  if (!trimmed) return dirPath;
+  const parts = trimmed.split(/[/\\]/);
+  return parts[parts.length - 1] || dirPath;
+}

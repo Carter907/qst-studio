@@ -1,5 +1,6 @@
 <script lang="ts">
   import { studio } from '../../state.svelte';
+  import { getDirectoryName } from '../../stores/types';
 
   let showRecentsMenu = $state(false);
 
@@ -27,7 +28,7 @@
         <svg class="ws-icon" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
           <path d="M1.75 2.5h3.69l1.5 1.5h7.31c.41 0 .75.34.75.75v7.5a.75.75 0 01-.75.75H1.75a.75.75 0 01-.75-.75V3.25c0-.41.34-.75.75-.75zm0 1.5v7.5h12.5v-6H6.56l-1.5-1.5H1.75z" />
         </svg>
-        <span class="ws-title">{studio.graph ? studio.graph.title : (studio.graphDir.split('/').pop() || 'No Workspace')}</span>
+        <span class="ws-title">{studio.graph ? studio.graph.title : (getDirectoryName(studio.graphDir) || 'No Workspace')}</span>
         <span class="ws-chevron">▾</span>
       </button>
 
@@ -47,8 +48,9 @@
                 type="button"
                 class="dropdown-item {rPath === studio.graphDir ? 'active' : ''}"
                 onclick={() => selectRecent(rPath)}
+                title={rPath}
               >
-                <span class="path-title">{rPath.split('/').pop()}</span>
+                <span class="path-title">{getDirectoryName(rPath)}</span>
                 <span class="path-full">{rPath}</span>
               </button>
             {/each}
@@ -244,6 +246,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+    gap: 2px;
     background: none;
     border: none;
     padding: 5px 8px;
@@ -263,6 +266,10 @@
     font-size: 11px;
     font-weight: 600;
     color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
   }
   .path-full {
     font-size: 9px;

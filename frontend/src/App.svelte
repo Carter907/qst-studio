@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { studio } from './state.svelte';
+  import { getDirectoryName } from './stores/types';
   import TopBar from './components/layout/TopBar.svelte';
   import StatusBar from './components/layout/StatusBar.svelte';
   import CommandPalette from './components/layout/CommandPalette.svelte';
@@ -102,8 +103,8 @@
             <h3>Recent Workspaces</h3>
             <div class="welcome-recents-list">
               {#each studio.recentGraphs as rPath}
-                <button type="button" class="recent-link" onclick={() => studio.handleLoadGraph(rPath)}>
-                  <span class="recent-title">{rPath.split('/').pop()}</span>
+                <button type="button" class="recent-link" onclick={() => studio.handleLoadGraph(rPath)} title={rPath}>
+                  <span class="recent-title">{getDirectoryName(rPath)}</span>
                   <span class="recent-path">{rPath}</span>
                 </button>
               {/each}
@@ -229,22 +230,25 @@
   .welcome-recents-list {
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    max-height: 130px;
+    gap: 4px;
+    max-height: 170px;
     overflow-y: auto;
   }
   .recent-link {
+    width: 100%;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    padding: 6px 10px;
+    padding: 7px 10px;
     border-radius: 4px;
     color: var(--text-main);
     cursor: pointer;
     font-size: 11px;
     text-align: left;
+    transition: background 0.12s ease, border-color 0.12s ease;
   }
   .recent-link:hover {
     background: var(--bg-card-hover);
@@ -252,10 +256,19 @@
   }
   .recent-title {
     font-weight: 600;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
   }
   .recent-path {
     font-size: 9px;
     color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
   }
   .welcome-shortcuts {
     display: flex;
