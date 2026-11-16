@@ -1,8 +1,16 @@
 <script lang="ts">
-  import { studio } from '../../state.svelte';
+  import RichOptionSelect from './RichOptionSelect.svelte';
   import type { quiz } from '../../../wailsjs/go/models';
 
-  let { card }: { card: quiz.QuizItemDTO } = $props();
+  let {
+    card,
+    answer,
+    checked
+  }: {
+    card: quiz.QuizItemDTO;
+    answer: Record<string, any>;
+    checked: boolean;
+  } = $props();
 </script>
 
 <div class="practice-blanks-container">
@@ -11,23 +19,19 @@
     <div class="practice-blank-row">
       <span class="blank-tag">[{tok}]</span>
       {#if def.type === 'dropdown'}
-        <select
-          class="input-field select-field"
-          disabled={studio.practiceChecked}
-          bind:value={studio.practiceAnswer.blanks[tok]}
-        >
-          <option value="">Select an option...</option>
-          {#each (studio.practiceAnswer.dropdownOptions && studio.practiceAnswer.dropdownOptions[tok]) || def.options || [] as opt}
-            <option value={opt}>{opt}</option>
-          {/each}
-        </select>
+        <RichOptionSelect
+          bind:value={answer.blanks[tok]}
+          options={(answer.dropdownOptions && answer.dropdownOptions[tok]) || def.options || []}
+          placeholder="Select an option..."
+          disabled={checked}
+        />
       {:else}
         <input
           type="text"
           class="input-field"
           placeholder="Enter answer..."
-          disabled={studio.practiceChecked}
-          bind:value={studio.practiceAnswer.blanks[tok]}
+          disabled={checked}
+          bind:value={answer.blanks[tok]}
         />
       {/if}
     </div>

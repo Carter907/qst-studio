@@ -1,26 +1,35 @@
 <script lang="ts">
-  import { studio } from '../../state.svelte';
   import { renderMarkdownWithLatex } from '../../markdown';
   import type { quiz } from '../../../wailsjs/go/models';
 
-  let { card, qType }: { card: quiz.QuizItemDTO; qType: string } = $props();
+  let {
+    card,
+    qType,
+    answer,
+    checked
+  }: {
+    card: quiz.QuizItemDTO;
+    qType: string;
+    answer: Record<string, any>;
+    checked: boolean;
+  } = $props();
 </script>
 
 <div class="practice-choices-list">
   {#if qType === 'multiple_answers'}
-    {#each studio.practiceAnswer.choices || card.choices || [] as ch}
-      {@const selectedList = studio.practiceAnswer.selectedIds || []}
+    {#each answer.choices || card.choices || [] as ch}
+      {@const selectedList = answer.selectedIds || []}
       {@const isSelected = selectedList.includes(ch.id)}
-      {@const isRevealed = studio.practiceChecked}
+      {@const isRevealed = checked}
       <button
         type="button"
         class="practice-choice-btn {isSelected ? 'selected' : ''} {isRevealed ? (ch.correct ? 'choice-correct' : (isSelected ? 'choice-wrong' : '')) : ''}"
-        disabled={studio.practiceChecked}
+        disabled={checked}
         onclick={() => {
           if (isSelected) {
-            studio.practiceAnswer.selectedIds = selectedList.filter((id: string) => id !== ch.id);
+            answer.selectedIds = selectedList.filter((id: string) => id !== ch.id);
           } else {
-            studio.practiceAnswer.selectedIds = [...selectedList, ch.id];
+            answer.selectedIds = [...selectedList, ch.id];
           }
         }}
       >
@@ -29,14 +38,14 @@
       </button>
     {/each}
   {:else}
-    {#each studio.practiceAnswer.choices || card.choices || [] as ch}
-      {@const isSelected = studio.practiceAnswer.choiceId === ch.id}
-      {@const isRevealed = studio.practiceChecked}
+    {#each answer.choices || card.choices || [] as ch}
+      {@const isSelected = answer.choiceId === ch.id}
+      {@const isRevealed = checked}
       <button
         type="button"
         class="practice-choice-btn {isSelected ? 'selected' : ''} {isRevealed ? (ch.correct ? 'choice-correct' : (isSelected ? 'choice-wrong' : '')) : ''}"
-        disabled={studio.practiceChecked}
-        onclick={() => studio.practiceAnswer.choiceId = ch.id}
+        disabled={checked}
+        onclick={() => answer.choiceId = ch.id}
       >
         <span class="choice-indicator">{isSelected ? '●' : '○'}</span>
         <span class="choice-text qst-inline-md">{@html renderMarkdownWithLatex(ch.text, true)}</span>

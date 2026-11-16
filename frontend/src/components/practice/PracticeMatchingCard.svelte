@@ -1,8 +1,17 @@
 <script lang="ts">
-  import { studio } from '../../state.svelte';
+  import { renderMarkdownWithLatex } from '../../markdown';
+  import RichOptionSelect from './RichOptionSelect.svelte';
   import type { quiz } from '../../../wailsjs/go/models';
 
-  let { card }: { card: quiz.QuizItemDTO } = $props();
+  let {
+    card,
+    answer,
+    checked
+  }: {
+    card: quiz.QuizItemDTO;
+    answer: Record<string, any>;
+    checked: boolean;
+  } = $props();
 
   function getAvailableMatchingTargets(item: quiz.QuizItemDTO): string[] {
     const set = new Set<string>();
@@ -19,25 +28,21 @@
     return Array.from(set);
   }
 
-  let targets = $derived(studio.practiceAnswer.targets || getAvailableMatchingTargets(card));
+  let targets = $derived(answer.targets || getAvailableMatchingTargets(card));
 </script>
 
 <div class="practice-matching-container">
   <span class="field-label">Match each prompt to its target:</span>
   {#each card.pairs || [] as pair}
     <div class="practice-match-row">
-      <span class="match-prompt-text">{pair.prompt}</span>
+      <span class="match-prompt-text qst-inline-md">{@html renderMarkdownWithLatex(pair.prompt, true)}</span>
       <span class="match-arrow">→</span>
-      <select
-        class="input-field select-field match-select"
-        disabled={studio.practiceChecked}
-        bind:value={studio.practiceAnswer.pairs[pair.prompt]}
-      >
-        <option value="">Choose match...</option>
-        {#each targets as tgt}
-          <option value={tgt}>{tgt}</option>
-        {/each}
-      </select>
+      <RichOptionSelect
+        bind:value={answer.pairs[pair.prompt]}
+        options={targets}
+        placeholder="Choose match..."
+        disabled={checked}
+      />
     </div>
   {/each}
 </div>
@@ -64,15 +69,5 @@
   }
   .match-arrow {
     color: var(--text-dim);
-  }
-  .input-field {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    color: var(--text-main);
-  }
-  .match-select {
-    font-size: 10px;
-    padding: 3px 6px;
   }
 </style>

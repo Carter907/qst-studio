@@ -13,32 +13,56 @@ import {
   SelectGraphDirectory,
   GetRecentGraphs,
   GetPracticeHistory,
-  RecordPracticeAttempt
+  RecordPracticeAttempt,
+  ListStandaloneQuizzes,
+  GetStandaloneQuiz,
+  GetQuizPracticeHistory,
+  RecordQuizAttempt
 } from '../wailsjs/go/main/App.js';
-import { quiz, type graph, type practice } from '../wailsjs/go/models';
+import { quiz, type graph, type practice, type quizzes } from '../wailsjs/go/models';
 import {
   type RightTab,
   type PracticeScope,
+  type WorkspaceMode,
+  type QuizDeckFilter,
+  type QuizStage,
+  type QuizCardSnapshot,
+  type PracticeResultState,
   type EditableChoice,
   type EditableBlank,
   type EditablePair,
   type BuilderNotice,
   defaultChoices,
   defaultTrueFalseChoices,
+  getQuizRecordKey,
   shuffleArray
 } from './stores/types';
 import { initPracticeAnswer, gradePracticeAnswer } from './stores/practiceGrading';
 import { buildQuizItemPayload } from './stores/builderHelpers';
 
-export type { RightTab, PracticeScope, EditableChoice, EditableBlank, EditablePair, BuilderNotice };
+export type {
+  RightTab,
+  PracticeScope,
+  WorkspaceMode,
+  QuizDeckFilter,
+  QuizStage,
+  QuizCardSnapshot,
+  PracticeResultState,
+  EditableChoice,
+  EditableBlank,
+  EditablePair,
+  BuilderNotice
+};
 
 class StudioState {
   // Workspace State
   graphDir = $state('');
   graph = $state<graph.GraphDTO | null>(null);
   recentGraphs = $state<string[]>([]);
+  workspaceMode = $state<WorkspaceMode>('graph');
   leftPaneOpen = $state<boolean>(true);
   rightPaneOpen = $state<boolean>(true);
+  quizSidebarOpen = $state<boolean>(true);
   activeRightTab = $state<RightTab>('inspector');
   statusMessage = $state<string>('Ready');
   showCommandPalette = $state(false);
@@ -88,7 +112,25 @@ class StudioState {
   practiceSessionScore = $state<{ correct: number; total: number }>({ correct: 0, total: 0 });
   practiceAnswer = $state<any>({});
   practiceChecked = $state<boolean>(false);
-  practiceResult = $state<{ isCorrect: boolean; feedback?: string } | null>(null);
+  practiceResult = $state<PracticeResultState | null>(null);
+
+  // Standalone Quizzes State
+  standaloneQuizzes = $state<quizzes.StandaloneQuizSummaryDTO[]>([]);
+  standaloneQuizzesError = $state<string>('');
+  selectedQuizId = $state<string>('');
+  selectedQuiz = $state<quizzes.StandaloneQuizDetailDTO | null>(null);
+  quizHistory = $state<Record<string, practice.QuizPracticeRecordDTO>>({});
+  quizStage = $state<QuizStage>('overview');
+  quizDeck = $state<quiz.QuizItemDTO[]>([]);
+  quizIndex = $state<number>(0);
+  quizFilter = $state<QuizDeckFilter>('all');
+  quizShuffled = $state<boolean>(false);
+  quizSessionScore = $state<{ correct: number; total: number }>({ correct: 0, total: 0 });
+  quizMissedIds = $state<string[]>([]);
+  quizRunSnapshots = $state<Record<number, QuizCardSnapshot>>({});
+  quizAnswer = $state<any>({});
+  quizChecked = $state<boolean>(false);
+  quizResult = $state<PracticeResultState | null>(null);
 
   // Zoom & UI Scaling State
   zoomLevel = $state<number>(100);
@@ -171,6 +213,15 @@ class StudioState {
       }
       await this.loadRecents();
       await this.loadPracticeHistory();
+      await this.loadQuizHistory();
+      this.selectedQuizId = '';
+      this.selectedQuiz = null;
+      this.quizStage = 'overview';
+      this.quizSidebarOpen = true;
+      this.quizDeck = [];
+      this.quizRunSnapshots = {};
+      this.quizMissedIds = [];
+      await this.loadStandaloneQuizzes(true);
       if (this.graph && this.graph.guides.length > 0) {
         this.practiceAnchorGuideId = this.graph.guides[0].id;
         await this.selectGuide(this.graph.guides[0].id);
@@ -192,6 +243,216 @@ class StudioState {
     } catch {
       this.practiceHistory = {};
     }
+  }
+
+  async loadQuizHistory() {
+    try {
+      this.quizHistory = await GetQuizPracticeHistory(this.graphDir);
+    } catch {
+      this.quizHistory = {};
+    }
+  }
+
+  setWorkspaceMode(mode: WorkspaceMode) {
+    this.workspaceMode = mode;
+  }
+
+  async loadStandaloneQuizzes(autoSelectFirst = false) {
+    if (!this.graphDir) {
+      this.standaloneQuizzes = [];
+      this.standaloneQuizzesError = '';
+      return;
+    }
+    try {
+      this.standaloneQuizzesError = '';
+      this.standaloneQuizzes = await ListStandaloneQuizzes(this.graphDir);
+      if (this.standaloneQuizzes.length === 0) {
+        this.selectedQuizId = '';
+        this.selectedQuiz = null;
+        this.quizDeck = [];
+        return;
+      }
+      const stillExists = this.standaloneQuizzes.some(q => q.id === this.selectedQuizId);
+      if (stillExists) {
+        await this.selectStandaloneQuiz(this.selectedQuizId);
+      } else if (autoSelectFirst || this.workspaceMode === 'quizzes') {
+        await this.selectStandaloneQuiz(this.standaloneQuizzes[0].id);
+      } else {
+        this.selectedQuizId = '';
+        this.selectedQuiz = null;
+        this.quizDeck = [];
+      }
+    } catch (err: any) {
+      this.standaloneQuizzes = [];
+      this.standaloneQuizzesError = `${err}`;
+      this.selectedQuiz = null;
+      this.quizDeck = [];
+    }
+  }
+
+  async reloadStandaloneQuizzes() {
+    await this.loadQuizHistory();
+    await this.loadStandaloneQuizzes(true);
+    if (!this.standaloneQuizzesError) {
+      this.statusMessage = `Loaded ${this.standaloneQuizzes.length} standalone quiz${this.standaloneQuizzes.length === 1 ? '' : 'zes'}`;
+    } else {
+      this.statusMessage = `Quiz load error: ${this.standaloneQuizzesError}`;
+    }
+  }
+
+  async selectStandaloneQuiz(quizID: string) {
+    if (!this.graphDir || !quizID) return;
+    try {
+      this.standaloneQuizzesError = '';
+      this.selectedQuizId = quizID;
+      this.selectedQuiz = await GetStandaloneQuiz(this.graphDir, quizID);
+      this.quizStage = 'overview';
+      this.quizSidebarOpen = true;
+      this.quizDeck = [];
+      this.quizRunSnapshots = {};
+      this.quizMissedIds = [];
+      this.quizSessionScore = { correct: 0, total: 0 };
+    } catch (err: any) {
+      this.selectedQuiz = null;
+      this.quizDeck = [];
+      this.quizStage = 'overview';
+      this.standaloneQuizzesError = `${err}`;
+      this.statusMessage = `Failed to load quiz: ${err}`;
+    }
+  }
+
+  getFilteredQuizItems(filter: QuizDeckFilter = this.quizFilter): quiz.QuizItemDTO[] {
+    const allItems = this.selectedQuiz?.items || [];
+    return allItems.filter(item => {
+      if (filter === 'all') return true;
+      const rec = this.quizHistory[getQuizRecordKey(this.selectedQuizId, item.id)];
+      if (filter === 'unseen') {
+        return !rec || rec.attempts === 0;
+      }
+      return Boolean(rec && rec.attempts > 0 && !rec.last_correct);
+    });
+  }
+
+  startQuizRun(itemsOverride?: quiz.QuizItemDTO[]) {
+    const baseItems = itemsOverride ?? this.getFilteredQuizItems(this.quizFilter);
+    if (baseItems.length === 0) return;
+    this.quizDeck = this.quizShuffled ? shuffleArray(baseItems) : [...baseItems];
+    this.quizIndex = 0;
+    this.quizSessionScore = { correct: 0, total: 0 };
+    this.quizMissedIds = [];
+    this.quizRunSnapshots = {};
+    this.quizStage = 'running';
+    this.quizSidebarOpen = false;
+    this.loadQuizCardAt(0);
+  }
+
+  retryMissedQuestions() {
+    if (!this.selectedQuiz || this.quizMissedIds.length === 0) return;
+    const missedSet = new Set(this.quizMissedIds);
+    const missedItems = this.selectedQuiz.items.filter(it => missedSet.has(it.id));
+    this.startQuizRun(missedItems);
+  }
+
+  exitQuizRun() {
+    this.quizStage = 'overview';
+    this.quizSidebarOpen = true;
+  }
+
+  finishQuizRun() {
+    this.saveCurrentQuizSnapshot();
+    this.quizStage = 'summary';
+    this.quizSidebarOpen = true;
+  }
+
+  private saveCurrentQuizSnapshot() {
+    if (this.quizDeck.length === 0) return;
+    this.quizRunSnapshots = {
+      ...this.quizRunSnapshots,
+      [this.quizIndex]: {
+        answer: this.quizAnswer,
+        checked: this.quizChecked,
+        result: this.quizResult
+      }
+    };
+  }
+
+  private loadQuizCardAt(index: number) {
+    const card = this.quizDeck[index];
+    const existing = this.quizRunSnapshots[index];
+    if (existing) {
+      this.quizAnswer = existing.answer;
+      this.quizChecked = existing.checked;
+      this.quizResult = existing.result;
+      return;
+    }
+    this.quizChecked = false;
+    this.quizResult = null;
+    this.quizAnswer = card ? initPracticeAnswer(card) : {};
+  }
+
+  nextQuizCard() {
+    if (this.quizIndex < this.quizDeck.length - 1) {
+      this.saveCurrentQuizSnapshot();
+      this.quizIndex++;
+      this.loadQuizCardAt(this.quizIndex);
+    }
+  }
+
+  prevQuizCard() {
+    if (this.quizIndex > 0) {
+      this.saveCurrentQuizSnapshot();
+      this.quizIndex--;
+      this.loadQuizCardAt(this.quizIndex);
+    }
+  }
+
+  private async recordQuizOutcome(card: quiz.QuizItemDTO, isCorrect: boolean, feedback?: string) {
+    this.quizChecked = true;
+    this.quizResult = { isCorrect, feedback };
+    this.quizSessionScore = {
+      correct: this.quizSessionScore.correct + (isCorrect ? 1 : 0),
+      total: this.quizSessionScore.total + 1
+    };
+    if (!isCorrect && !this.quizMissedIds.includes(card.id)) {
+      this.quizMissedIds = [...this.quizMissedIds, card.id];
+    }
+    this.saveCurrentQuizSnapshot();
+
+    try {
+      await RecordQuizAttempt(this.graphDir, this.selectedQuizId, card.id, isCorrect);
+      await this.loadQuizHistory();
+    } catch (err: any) {
+      this.statusMessage = `Quiz record error: ${err}`;
+    }
+  }
+
+  async submitQuizAnswer() {
+    const card = this.quizDeck[this.quizIndex];
+    if (!card || this.quizChecked) return;
+
+    const result = gradePracticeAnswer(card, this.quizAnswer);
+    if (result.selfGraded) {
+      this.quizAnswer.revealed = true;
+      return;
+    }
+
+    await this.recordQuizOutcome(card, result.isCorrect, result.feedback);
+  }
+
+  async selfGradeQuizEssay(understood: boolean) {
+    const card = this.quizDeck[this.quizIndex];
+    if (!card) return;
+    await this.recordQuizOutcome(
+      card,
+      understood,
+      understood ? 'Marked as Understood' : 'Marked for Review'
+    );
+  }
+
+  async jumpToRelatedGuide(guideID: string) {
+    if (!guideID) return;
+    this.workspaceMode = 'graph';
+    await this.selectGuide(guideID);
   }
 
   async handleNativeFolderPick() {

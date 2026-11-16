@@ -71,11 +71,46 @@
       <span class="search-label">Search</span>
       <kbd class="search-kbd">Ctrl+P</kbd>
     </button>
+
+    {#if studio.graph}
+      <div class="mode-switch-group" role="tablist" aria-label="Workspace Mode">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={studio.workspaceMode === 'graph'}
+          class="mode-switch-btn {studio.workspaceMode === 'graph' ? 'active' : ''}"
+          onclick={() => studio.setWorkspaceMode('graph')}
+          title="Knowledge Graph & Line-Anchored Questions"
+        >
+          Graph
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={studio.workspaceMode === 'quizzes'}
+          class="mode-switch-btn {studio.workspaceMode === 'quizzes' ? 'active' : ''}"
+          onclick={() => studio.setWorkspaceMode('quizzes')}
+          title="Standalone Concept Quizzes (quizzes/*.yaml)"
+        >
+          Quizzes{#if studio.standaloneQuizzes.length > 0}<span class="mode-count">{studio.standaloneQuizzes.length}</span>{/if}
+        </button>
+      </div>
+    {/if}
   </div>
 
-  <!-- Center: Active Guide Indicator -->
+  <!-- Center: Active Guide or Quiz Indicator -->
   <div class="header-center">
-    {#if studio.selectedGuide}
+    {#if studio.workspaceMode === 'quizzes'}
+      {#if studio.selectedQuiz}
+        <span class="center-guide-id">{studio.selectedQuiz.title}</span>
+        <span class="center-sep">•</span>
+        <span class="scope-pill-sm">standalone</span>
+        <span class="center-sep">•</span>
+        <span class="center-line-count">{studio.selectedQuiz.items.length} questions</span>
+      {:else}
+        <span class="center-line-count">Standalone Quizzes</span>
+      {/if}
+    {:else if studio.selectedGuide}
       <span class="center-guide-id">{studio.selectedGuide.id}</span>
       <span class="center-sep">•</span>
       <span class="scope-pill-sm">{studio.selectedGuide.scope}</span>
@@ -115,26 +150,39 @@
       </button>
     </div>
 
-    <div class="header-vsep"></div>
+    {#if !(studio.workspaceMode === 'quizzes' && studio.quizStage === 'running')}
+      <div class="header-vsep"></div>
 
-    <div class="pane-tabs-group">
-      <button
-        type="button"
-        class="pane-tab-btn {studio.leftPaneOpen ? 'is-open' : ''}"
-        onclick={() => studio.leftPaneOpen = !studio.leftPaneOpen}
-        title="Toggle Left Guide Navigator (Ctrl+B)"
-      >
-        Guides
-      </button>
-      <button
-        type="button"
-        class="pane-tab-btn {studio.rightPaneOpen ? 'is-open' : ''}"
-        onclick={() => studio.rightPaneOpen = !studio.rightPaneOpen}
-        title="Toggle Right Inspector & Questions Panel"
-      >
-        Inspector
-      </button>
-    </div>
+      <div class="pane-tabs-group">
+        {#if studio.workspaceMode === 'quizzes'}
+          <button
+            type="button"
+            class="pane-tab-btn {studio.quizSidebarOpen ? 'is-open' : ''}"
+            onclick={() => studio.quizSidebarOpen = !studio.quizSidebarOpen}
+            title="Toggle Quiz List Sidebar (Ctrl+B)"
+          >
+            Quiz List
+          </button>
+        {:else}
+          <button
+            type="button"
+            class="pane-tab-btn {studio.leftPaneOpen ? 'is-open' : ''}"
+            onclick={() => studio.leftPaneOpen = !studio.leftPaneOpen}
+            title="Toggle Left Guide Navigator (Ctrl+B)"
+          >
+            Guides
+          </button>
+          <button
+            type="button"
+            class="pane-tab-btn {studio.rightPaneOpen ? 'is-open' : ''}"
+            onclick={() => studio.rightPaneOpen = !studio.rightPaneOpen}
+            title="Toggle Right Inspector & Questions Panel"
+          >
+            Inspector
+          </button>
+        {/if}
+      </div>
+    {/if}
   </div>
 </header>
 
@@ -312,6 +360,45 @@
     padding: 1px 4px;
     border-radius: 3px;
     font-family: inherit;
+  }
+
+  .mode-switch-group {
+    display: inline-flex;
+    align-items: center;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 2px;
+    gap: 2px;
+  }
+  .mode-switch-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 22px;
+    padding: 0 8px;
+    background: transparent;
+    border: none;
+    border-radius: 3px;
+    color: var(--text-dim);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.1s ease;
+  }
+  .mode-switch-btn:hover {
+    color: var(--text-main);
+  }
+  .mode-switch-btn.active {
+    background: var(--accent-white);
+    color: var(--text-dark);
+    font-weight: 600;
+  }
+  .mode-count {
+    font-size: 9px;
+    font-weight: 700;
+    opacity: 0.75;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 
   .header-center {

@@ -4,7 +4,7 @@
   interface PaletteItem {
     id: string;
     label: string;
-    category: 'guide' | 'action';
+    category: 'guide' | 'quiz' | 'action';
     detail?: string;
     action: () => void;
   }
@@ -37,11 +37,25 @@
         action: () => studio.handleNativeFolderPick()
       },
       {
+        id: 'act-mode-toggle',
+        label: studio.workspaceMode === 'quizzes' ? 'Mode: Switch to Graph Workspace' : 'Mode: Switch to Standalone Quizzes',
+        category: 'action',
+        action: () => studio.setWorkspaceMode(studio.workspaceMode === 'quizzes' ? 'graph' : 'quizzes')
+      },
+      {
         id: 'act-sidebar',
-        label: studio.leftPaneOpen ? 'Hide Left Guide Navigator' : 'Show Left Guide Navigator',
+        label: studio.workspaceMode === 'quizzes'
+          ? (studio.quizSidebarOpen ? 'Hide Quiz List Sidebar' : 'Show Quiz List Sidebar')
+          : (studio.leftPaneOpen ? 'Hide Left Guide Navigator' : 'Show Left Guide Navigator'),
         category: 'action',
         detail: 'Ctrl+B',
-        action: () => { studio.leftPaneOpen = !studio.leftPaneOpen; }
+        action: () => {
+          if (studio.workspaceMode === 'quizzes') {
+            studio.quizSidebarOpen = !studio.quizSidebarOpen;
+          } else {
+            studio.leftPaneOpen = !studio.leftPaneOpen;
+          }
+        }
       },
       {
         id: 'act-inspector',
@@ -109,7 +123,23 @@
           label: g.id,
           category: 'guide',
           detail: `${g.scope} • ${g.line_count} lines`,
-          action: () => studio.selectGuide(g.id)
+          action: () => {
+            studio.setWorkspaceMode('graph');
+            studio.selectGuide(g.id);
+          }
+        });
+      });
+
+      studio.standaloneQuizzes.forEach(q => {
+        items.push({
+          id: `quiz-${q.id}`,
+          label: q.title,
+          category: 'quiz',
+          detail: `${q.item_count} questions${q.tags?.length ? ` • ${q.tags.join(', ')}` : ''}`,
+          action: () => {
+            studio.setWorkspaceMode('quizzes');
+            studio.selectStandaloneQuiz(q.id);
+          }
         });
       });
     }
@@ -300,6 +330,10 @@
   .tag-guide {
     background: rgba(88, 166, 255, 0.15);
     color: #58a6ff;
+  }
+  .tag-quiz {
+    background: rgba(63, 185, 80, 0.15);
+    color: #3fb950;
   }
   .tag-action {
     background: rgba(163, 113, 247, 0.15);

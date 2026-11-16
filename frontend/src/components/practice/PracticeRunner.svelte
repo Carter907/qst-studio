@@ -166,15 +166,20 @@
 
       <div class="interaction-container">
         {#if qType === 'multiple_choice' || qType === 'true_false' || qType === 'multiple_answers'}
-          <PracticeChoiceCard {card} {qType} />
+          <PracticeChoiceCard {card} {qType} answer={studio.practiceAnswer} checked={studio.practiceChecked} />
         {:else if qType === 'fill_in_the_blank'}
-          <PracticeBlankCard {card} />
+          <PracticeBlankCard {card} answer={studio.practiceAnswer} checked={studio.practiceChecked} />
         {:else if qType === 'matching'}
-          <PracticeMatchingCard {card} />
+          <PracticeMatchingCard {card} answer={studio.practiceAnswer} checked={studio.practiceChecked} />
         {:else if qType === 'ordering'}
-          <PracticeOrderingCard {card} />
+          <PracticeOrderingCard {card} answer={studio.practiceAnswer} checked={studio.practiceChecked} result={studio.practiceResult} />
         {:else if qType === 'essay'}
-          <PracticeEssayCard {card} />
+          <PracticeEssayCard
+            {card}
+            answer={studio.practiceAnswer}
+            checked={studio.practiceChecked}
+            onSelfGrade={(understood) => studio.selfGradeEssay(understood)}
+          />
         {/if}
       </div>
 

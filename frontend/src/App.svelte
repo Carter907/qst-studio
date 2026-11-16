@@ -8,6 +8,7 @@
   import GuideSidebar from './components/guide/GuideSidebar.svelte';
   import GuideViewer from './components/guide/GuideViewer.svelte';
   import NodeInspector from './components/guide/NodeInspector.svelte';
+  import QuizWorkspace from './components/quizzes/QuizWorkspace.svelte';
 
   onMount(() => {
     studio.init();
@@ -59,7 +60,13 @@
 
     if (isCmd && (e.key === 'b' || e.key === 'B')) {
       e.preventDefault();
-      studio.leftPaneOpen = !studio.leftPaneOpen;
+      if (studio.workspaceMode === 'quizzes') {
+        if (studio.quizStage !== 'running') {
+          studio.quizSidebarOpen = !studio.quizSidebarOpen;
+        }
+      } else {
+        studio.leftPaneOpen = !studio.leftPaneOpen;
+      }
       return;
     }
 
@@ -120,6 +127,8 @@
         </div>
       </div>
     </div>
+  {:else if studio.workspaceMode === 'quizzes'}
+    <QuizWorkspace />
   {:else}
     <div
       class="workspace-stage {studio.leftPaneOpen ? 'has-left' : 'no-left'} {studio.rightPaneOpen ? 'has-right' : 'no-right'}"

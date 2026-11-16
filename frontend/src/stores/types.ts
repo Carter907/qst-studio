@@ -1,5 +1,24 @@
 export type RightTab = 'inspector' | 'questions' | 'practice';
 export type PracticeScope = 'guide' | 'subtree' | 'learning_path' | 'tour' | 'graph';
+export type WorkspaceMode = 'graph' | 'quizzes';
+export type QuizDeckFilter = 'all' | 'unseen' | 'needs_review';
+export type QuizStage = 'overview' | 'running' | 'summary';
+
+export interface PracticeResultState {
+  isCorrect: boolean;
+  feedback?: string;
+}
+
+export interface QuizCardSnapshot {
+  answer: Record<string, any>;
+  checked: boolean;
+  result: PracticeResultState | null;
+}
+
+/** Builds the canonical quiz history lookup key matching internal/practice.QuizRecordKey. */
+export function getQuizRecordKey(quizId: string, itemId: string): string {
+  return `${quizId}::${itemId}`;
+}
 
 export interface EditableChoice {
   id: string;

@@ -40,7 +40,12 @@
         <div class="blank-preview-item">
           <span class="blank-token-pill">[{b.token}]</span>
           {#if b.type === 'dropdown'}
-            <span class="blank-preview-detail">Dropdown: <strong>{b.correct || '(none)'}</strong> (Options: {b.options.filter(o => o.trim()).join(', ')})</span>
+            <span class="blank-preview-detail qst-inline-md">
+              Dropdown: <strong>{@html renderMarkdownWithLatex(b.correct || '(none)', true)}</strong>
+              {#if b.options.some(o => o.trim())}
+                (Options: {@html b.options.filter(o => o.trim()).map(o => renderMarkdownWithLatex(o, true)).join(', ')})
+              {/if}
+            </span>
           {:else}
             <span class="blank-preview-detail">Text Answers: <strong>{b.answers.filter(a => a.trim()).join(' | ')}</strong></span>
           {/if}
@@ -52,15 +57,15 @@
       <span class="field-label">Matching Pairs</span>
       {#each studio.itemPairs as p}
         <div class="matching-pair-preview">
-          <span class="match-left">{p.prompt || '(prompt)'}</span>
+          <span class="match-left qst-inline-md">{@html renderMarkdownWithLatex(p.prompt || '(prompt)', true)}</span>
           <span class="match-arrow">→</span>
-          <span class="match-right">{p.target || '(target)'}</span>
+          <span class="match-right qst-inline-md">{@html renderMarkdownWithLatex(p.target || '(target)', true)}</span>
         </div>
       {/each}
       {#if studio.itemDistractors.length > 0}
         <div class="distractors-preview">
           <span class="field-label">Distractors:</span>
-          <span class="distractors-list">{studio.itemDistractors.filter(d => d.trim()).join(', ')}</span>
+          <span class="distractors-list qst-inline-md">{@html studio.itemDistractors.filter(d => d.trim()).map(d => renderMarkdownWithLatex(d, true)).join(', ')}</span>
         </div>
       {/if}
     </div>
@@ -73,7 +78,7 @@
         {#each studio.itemOrderItems as it, idx}
           <div class="order-item-row">
             <span class="order-num">{idx + 1}.</span>
-            <span>{it || '(empty item)'}</span>
+            <span class="qst-inline-md">{@html renderMarkdownWithLatex(it || '(empty item)', true)}</span>
           </div>
         {/each}
       </div>

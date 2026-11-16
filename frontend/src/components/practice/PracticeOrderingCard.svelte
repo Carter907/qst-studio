@@ -1,14 +1,25 @@
 <script lang="ts">
-  import { studio } from '../../state.svelte';
+  import { renderMarkdownWithLatex } from '../../markdown';
+  import type { PracticeResultState } from '../../stores/types';
   import type { quiz } from '../../../wailsjs/go/models';
 
-  let { card }: { card: quiz.QuizItemDTO } = $props();
+  let {
+    card,
+    answer,
+    checked,
+    result
+  }: {
+    card: quiz.QuizItemDTO;
+    answer: Record<string, any>;
+    checked: boolean;
+    result: PracticeResultState | null;
+  } = $props();
 
   let draggedIndex = $state<number | null>(null);
   let dragOverIndex = $state<number | null>(null);
 
   function handleDragStart(idx: number, e: DragEvent) {
-    if (studio.practiceChecked) return;
+    if (checked) return;
     draggedIndex = idx;
     if (e.dataTransfer) {
       e.dataTransfer.effectAllowed = 'move';
@@ -17,7 +28,7 @@
   }
 
   function handleDragOver(idx: number, e: DragEvent) {
-    if (draggedIndex === null || studio.practiceChecked) return;
+    if (draggedIndex === null || checked) return;
     e.preventDefault();
     if (e.dataTransfer) {
       e.dataTransfer.dropEffect = 'move';
@@ -28,7 +39,7 @@
   }
 
   function handleDragEnter(idx: number) {
-    if (draggedIndex === null || studio.practiceChecked) return;
+    if (draggedIndex === null || checked) return;
     dragOverIndex = idx;
   }
 
@@ -40,12 +51,12 @@
 
   function handleDrop(targetIdx: number, e: DragEvent) {
     e.preventDefault();
-    if (draggedIndex === null || studio.practiceChecked) return;
+    if (draggedIndex === null || checked) return;
     if (draggedIndex !== targetIdx) {
-      const items = [...(studio.practiceAnswer.items || [])];
+      const items = [...(answer.items || [])];
       const [moved] = items.splice(draggedIndex, 1);
       items.splice(targetIdx, 0, moved);
-      studio.practiceAnswer.items = items;
+      answer.items = items;
     }
     draggedIndex = null;
     dragOverIndex = null;
@@ -66,12 +77,12 @@
     role="list"
     ondragover={(e) => e.preventDefault()}
   >
-    {#each studio.practiceAnswer.items || [] as item, idx}
+    {#each answer.items || [] as item, idx}
       {@const isDragged = draggedIndex === idx}
       {@const isOver = dragOverIndex === idx && draggedIndex !== idx}
       <div
-        class="practice-order-item {isDragged ? 'is-dragging' : ''} {isOver ? 'drop-target' : ''} {studio.practiceChecked ? 'is-disabled' : ''}"
-        draggable={!studio.practiceChecked}
+        class="practice-order-item {isDragged ? 'is-dragging' : ''} {isOver ? 'drop-target' : ''} {checked ? 'is-disabled' : ''}"
+        draggable={!checked}
         role="listitem"
         ondragstart={(e) => handleDragStart(idx, e)}
         ondragover={(e) => handleDragOver(idx, e)}
@@ -80,7 +91,7 @@
         ondrop={(e) => handleDrop(idx, e)}
         ondragend={handleDragEnd}
       >
-        {#if !studio.practiceChecked}
+        {#if !checked}
           <span class="order-drag-handle" title="Drag card to correct spot">
             <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
               <circle cx="5" cy="3.5" r="1.5" />
@@ -93,8 +104,8 @@
           </span>
         {/if}
         <span class="order-seq-num">{idx + 1}.</span>
-        <span class="order-item-text">{item}</span>
-        {#if studio.practiceChecked && card.items}
+        <span class="order-item-text qst-inline-md">{@html renderMarkdownWithLatex(item, true)}</span>
+        {#if checked && card.items}
           {@const isSpotCorrect = card.items[idx] === item}
           <span class="order-spot-badge {isSpotCorrect ? 'spot-correct' : 'spot-wrong'}">
             {isSpotCorrect ? '✓' : '✗'}
@@ -107,12 +118,12 @@
     <div class="order-dir-label">▼ {card.bottom_label}</div>
   {/if}
 
-  {#if studio.practiceChecked && studio.practiceResult && !studio.practiceResult.isCorrect && card.items}
+  {#if checked && result && !result.isCorrect && card.items}
     <div class="order-solution-box">
       <span class="field-label">Correct Sequence:</span>
       <ol class="order-solution-list">
         {#each card.items as solItem}
-          <li>{solItem}</li>
+          <li class="qst-inline-md">{@html renderMarkdownWithLatex(solItem, true)}</li>
         {/each}
       </ol>
     </div>

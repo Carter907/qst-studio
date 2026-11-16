@@ -9,18 +9,30 @@
 
   <div class="statusbar-right">
     {#if studio.graph}
-      <span class="statusbar-metric">
-        <strong>{studio.graph.guides.length}</strong> Guides
-      </span>
-      <span class="statusbar-sep">•</span>
-      <span class="statusbar-metric">
-        <strong>{studio.quizItems.length}</strong> Questions ({studio.selectedGuideId || 'none'})
-      </span>
-      {#if studio.startLine !== null}
+      {#if studio.workspaceMode === 'quizzes'}
+        <span class="statusbar-metric">
+          <strong>{studio.standaloneQuizzes.length}</strong> Quizzes
+        </span>
+        {#if studio.selectedQuiz}
+          <span class="statusbar-sep">•</span>
+          <span class="statusbar-metric">
+            <strong>{studio.selectedQuiz.items.length}</strong> Questions ({studio.selectedQuiz.id})
+          </span>
+        {/if}
+      {:else}
+        <span class="statusbar-metric">
+          <strong>{studio.graph.guides.length}</strong> Guides
+        </span>
         <span class="statusbar-sep">•</span>
         <span class="statusbar-metric">
-          Segment: <strong>lines {studio.getActiveSegment()}</strong>
+          <strong>{studio.quizItems.length}</strong> Questions ({studio.selectedGuideId || 'none'})
         </span>
+        {#if studio.startLine !== null}
+          <span class="statusbar-sep">•</span>
+          <span class="statusbar-metric">
+            Segment: <strong>lines {studio.getActiveSegment()}</strong>
+          </span>
+        {/if}
       {/if}
     {/if}
   </div>
