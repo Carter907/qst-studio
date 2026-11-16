@@ -189,6 +189,30 @@ export namespace practice {
 	        this.last_practiced_at = source["last_practiced_at"];
 	    }
 	}
+	export class QuizPracticeRecordDTO {
+	    key: string;
+	    quiz_id: string;
+	    item_id: string;
+	    attempts: number;
+	    correct: number;
+	    last_correct: boolean;
+	    last_practiced_at: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new QuizPracticeRecordDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.key = source["key"];
+	        this.quiz_id = source["quiz_id"];
+	        this.item_id = source["item_id"];
+	        this.attempts = source["attempts"];
+	        this.correct = source["correct"];
+	        this.last_correct = source["last_correct"];
+	        this.last_practiced_at = source["last_practiced_at"];
+	    }
+	}
 
 }
 
@@ -325,6 +349,77 @@ export namespace quiz {
 		    }
 		    return a;
 		}
+	}
+
+}
+
+export namespace quizzes {
+	
+	export class StandaloneQuizDetailDTO {
+	    id: string;
+	    title: string;
+	    description: string;
+	    file_path: string;
+	    tags: string[];
+	    related_guides: string[];
+	    items: quiz.QuizItemDTO[];
+	
+	    static createFrom(source: any = {}) {
+	        return new StandaloneQuizDetailDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.title = source["title"];
+	        this.description = source["description"];
+	        this.file_path = source["file_path"];
+	        this.tags = source["tags"];
+	        this.related_guides = source["related_guides"];
+	        this.items = this.convertValues(source["items"], quiz.QuizItemDTO);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class StandaloneQuizSummaryDTO {
+	    id: string;
+	    title: string;
+	    description: string;
+	    file_path: string;
+	    tags: string[];
+	    related_guides: string[];
+	    item_count: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new StandaloneQuizSummaryDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.title = source["title"];
+	        this.description = source["description"];
+	        this.file_path = source["file_path"];
+	        this.tags = source["tags"];
+	        this.related_guides = source["related_guides"];
+	        this.item_count = source["item_count"];
+	    }
 	}
 
 }

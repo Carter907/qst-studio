@@ -143,16 +143,7 @@ func GetItems(dirPath string, guideID string) ([]QuizItemDTO, error) {
 		return nil, fmt.Errorf("failed to parse items.yaml: %w", err)
 	}
 
-	for i := range bank.Items {
-		if bank.Items[i].Type == "" || bank.Items[i].Type == "choice" {
-			bank.Items[i].Type = "multiple_choice"
-		}
-		for j := range bank.Items[i].Choices {
-			if strings.TrimSpace(bank.Items[i].Choices[j].ID) == "" {
-				bank.Items[i].Choices[j].ID = fmt.Sprintf("c%d", j+1)
-			}
-		}
-	}
+	NormalizeLoadedItems(bank.Items)
 
 	if guideID == "" {
 		return bank.Items, nil
@@ -165,6 +156,20 @@ func GetItems(dirPath string, guideID string) ([]QuizItemDTO, error) {
 		}
 	}
 	return filtered, nil
+}
+
+// NormalizeLoadedItems populates default item types and choice IDs for loaded quiz items.
+func NormalizeLoadedItems(items []QuizItemDTO) {
+	for i := range items {
+		if items[i].Type == "" || items[i].Type == "choice" {
+			items[i].Type = "multiple_choice"
+		}
+		for j := range items[i].Choices {
+			if strings.TrimSpace(items[i].Choices[j].ID) == "" {
+				items[i].Choices[j].ID = fmt.Sprintf("c%d", j+1)
+			}
+		}
+	}
 }
 
 // GetItemsForGuides returns saved quiz items matching guideIDs, ordered by guideIDs then items.yaml order.
@@ -227,15 +232,7 @@ func FilterItemsByScopes(items []QuizItemDTO, allowedScopes []string, guideScope
 
 // SaveItem validates and saves or updates a quiz item in items.yaml.
 func SaveItem(dirPath string, item QuizItemDTO) error {
-	if strings.TrimSpace(item.Prompt) == "" {
-		return fmt.Errorf("question prompt cannot be empty")
-	}
-
-	if item.Type == "" || item.Type == "choice" {
-		item.Type = "multiple_choice"
-	}
-
-	if err := validateAndNormalizeItem(&item); err != nil {
+	if err := ValidateAndNormalizeItem(&item); err != nil {
 		return err
 	}
 
@@ -275,7 +272,14 @@ func SaveItem(dirPath string, item QuizItemDTO) error {
 	return os.WriteFile(filePath, out, 0644)
 }
 
-func validateAndNormalizeItem(item *QuizItemDTO) error {
+// ValidateAndNormalizeItem validates a quiz item's prompt, type, and type-specific fields, normalizing defaults.
+func ValidateAndNormalizeItem(item *QuizItemDTO) error {
+	if strings.TrimSpace(item.Prompt) == "" {
+		return fmt.Errorf("question prompt cannot be empty")
+	}
+	if item.Type == "" || item.Type == "choice" {
+		item.Type = "multiple_choice"
+	}
 	switch item.Type {
 	case "multiple_choice", "true_false":
 		validChoices, err := validateChoices(item.Choices, true)

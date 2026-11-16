@@ -456,3 +456,112 @@ tours:
 		t.Fatal("expected non-nil empty Scopes slice when omitted from manifest.yaml")
 	}
 }
+
+func TestStandaloneQuizzesAndIsolatedHistory(t *testing.T) {
+	tmpDir := t.TempDir()
+	app := NewApp()
+
+	// Minimal graph manifest + guide + anchored item.
+	if err := os.WriteFile(filepath.Join(tmpDir, "qst.yaml"), []byte("title: Graph\nscopes:\n  - definition\n"), 0644); err != nil {
+		t.Fatalf("write qst.yaml: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(tmpDir, "pointers.md"), []byte("---\nscope: definition\n---\nLine 1\nLine 2\n"), 0644); err != nil {
+		t.Fatalf("write pointers.md: %v", err)
+	}
+	if err := app.SaveQuizItem(tmpDir, QuizItemDTO{
+		ID:      "Q_GUIDE_1",
+		GuideID: "pointers",
+		Segment: "1-2",
+		Type:    "true_false",
+		Prompt:  "Guide-anchored question.",
+		Choices: []QuizChoiceDTO{
+			{Text: "True", Correct: true},
+			{Text: "False", Correct: false},
+		},
+	}); err != nil {
+		t.Fatalf("SaveQuizItem failed: %v", err)
+	}
+
+	// Standalone quiz under quizzes/.
+	qDir := filepath.Join(tmpDir, "quizzes")
+	if err := os.MkdirAll(qDir, 0755); err != nil {
+		t.Fatalf("mkdir quizzes: %v", err)
+	}
+	quizYaml := `id: math-drills
+title: Math Drills
+related_guides:
+  - pointers
+items:
+  - id: QZ_1
+    prompt: "$2 + 2 = [b1]$"
+    type: fill_in_the_blank
+    blanks:
+      b1:
+        type: text
+        answers: ["4"]
+`
+	if err := os.WriteFile(filepath.Join(qDir, "math-drills.yaml"), []byte(quizYaml), 0644); err != nil {
+		t.Fatalf("write math-drills.yaml: %v", err)
+	}
+
+	// 1. Graph loader must NOT treat quizzes/*.yaml as guides, and GetPracticeDeck must NOT include QZ_1.
+	g, err := app.LoadGraph(tmpDir)
+	if err != nil {
+		t.Fatalf("LoadGraph failed: %v", err)
+	}
+	if len(g.Guides) != 1 || g.Guides[0].ID != "pointers" {
+		t.Fatalf("unexpected guides loaded: %+v", g.Guides)
+	}
+	deck, err := app.GetPracticeDeck(tmpDir, PracticeDeckOptions{Scope: "graph"})
+	if err != nil {
+		t.Fatalf("GetPracticeDeck(graph) failed: %v", err)
+	}
+	if len(deck) != 1 || deck[0].ID != "Q_GUIDE_1" {
+		t.Fatalf("expected only guide-anchored item in graph deck, got %+v", deck)
+	}
+
+	// 2. Standalone quiz RPCs list & load the quiz.
+	summaries, err := app.ListStandaloneQuizzes(tmpDir)
+	if err != nil {
+		t.Fatalf("ListStandaloneQuizzes failed: %v", err)
+	}
+	if len(summaries) != 1 || summaries[0].ID != "math-drills" || summaries[0].ItemCount != 1 {
+		t.Fatalf("unexpected standalone quiz summaries: %+v", summaries)
+	}
+	detail, err := app.GetStandaloneQuiz(tmpDir, "math-drills")
+	if err != nil {
+		t.Fatalf("GetStandaloneQuiz failed: %v", err)
+	}
+	if len(detail.Items) != 1 || detail.Items[0].ID != "QZ_1" {
+		t.Fatalf("unexpected quiz detail items: %+v", detail.Items)
+	}
+
+	// 3. Standalone quiz attempts stay isolated from guide practice history.
+	if err := app.RecordQuizAttempt(tmpDir, "math-drills", "QZ_1", true); err != nil {
+		t.Fatalf("RecordQuizAttempt failed: %v", err)
+	}
+	quizHist, err := app.GetQuizPracticeHistory(tmpDir)
+	if err != nil {
+		t.Fatalf("GetQuizPracticeHistory failed: %v", err)
+	}
+	rec, ok := quizHist["math-drills::QZ_1"]
+	if !ok || rec.Attempts != 1 || rec.Correct != 1 || !rec.LastCorrect {
+		t.Fatalf("unexpected quiz history record: %+v", rec)
+	}
+	guideHist, err := app.GetPracticeHistory(tmpDir)
+	if err != nil {
+		t.Fatalf("GetPracticeHistory failed: %v", err)
+	}
+	if len(guideHist) != 0 {
+		t.Fatalf("expected guide practice history to remain empty, got %+v", guideHist)
+	}
+
+	// 4. Bundled examples/intro-graph standalone quiz parses and validates cleanly.
+	exList, err := app.ListStandaloneQuizzes(filepath.Join("examples", "intro-graph"))
+	if err != nil {
+		t.Fatalf("ListStandaloneQuizzes(examples/intro-graph) failed: %v", err)
+	}
+	if len(exList) != 1 || exList[0].ID != "pointer-drills" || exList[0].ItemCount != 3 {
+		t.Fatalf("unexpected example quizzes: %+v", exList)
+	}
+}

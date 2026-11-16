@@ -30,12 +30,28 @@ export function GetQuizItems(arg1, arg2) {
   return window['go']['main']['App']['GetQuizItems'](arg1, arg2);
 }
 
+export function GetQuizPracticeHistory(arg1) {
+  return window['go']['main']['App']['GetQuizPracticeHistory'](arg1);
+}
+
+export function GetQuizPracticeRecord(arg1, arg2, arg3) {
+  return window['go']['main']['App']['GetQuizPracticeRecord'](arg1, arg2, arg3);
+}
+
 export function GetRecentGraphs() {
   return window['go']['main']['App']['GetRecentGraphs']();
 }
 
+export function GetStandaloneQuiz(arg1, arg2) {
+  return window['go']['main']['App']['GetStandaloneQuiz'](arg1, arg2);
+}
+
 export function GetSubtreePath(arg1, arg2) {
   return window['go']['main']['App']['GetSubtreePath'](arg1, arg2);
+}
+
+export function ListStandaloneQuizzes(arg1) {
+  return window['go']['main']['App']['ListStandaloneQuizzes'](arg1);
 }
 
 export function LoadGraph(arg1) {
@@ -44,6 +60,10 @@ export function LoadGraph(arg1) {
 
 export function RecordPracticeAttempt(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['RecordPracticeAttempt'](arg1, arg2, arg3, arg4);
+}
+
+export function RecordQuizAttempt(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['RecordQuizAttempt'](arg1, arg2, arg3, arg4);
 }
 
 export function SaveGuideContent(arg1, arg2) {

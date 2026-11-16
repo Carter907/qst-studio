@@ -1,0 +1,44 @@
+title: Pointer Arithmetic Drills
+description: Focused address calculation and offset exercises linked to `pointers`.
+tags:
+  - math
+  - pointers
+related_guides:
+  - pointers
+  - variables
+items:
+  - id: QZ_PTR_01
+    title: Byte offset with 4-byte integers
+    type: fill_in_the_blank
+    prompt: "Suppose `int *p` points to address `$0x1000$` and `sizeof(int) = 4`. What hexadecimal address does `p + 3` evaluate to? [b1]"
+    blanks:
+      b1:
+        type: text
+        answers:
+          - "0x100c"
+          - "0x100C"
+  - id: QZ_PTR_02
+    title: Pointer difference scaling
+    type: multiple_choice
+    prompt: "Given `double arr[10]` where `sizeof(double) = 8`, what is the value of `(&arr[7]) - (&arr[2])`?"
+    choices:
+      - text: "`5`"
+        correct: true
+        feedback: "Pointer subtraction yields the distance in **elements**, not bytes: $7 - 2 = 5$."
+      - text: "`40`"
+        correct: false
+        feedback: "40 is the byte distance ($5 \\times 8$), whereas pointer subtraction divides by `sizeof(double)`."
+      - text: "`9`"
+        correct: false
+        feedback: "Subtract the indices rather than adding them."
+  - id: QZ_PTR_03
+    title: Dereference vs address-of equivalence
+    type: true_false
+    prompt: "For any valid non-null pointer `p`, the expression `&(*p)` evaluates to the same address as `p`."
+    choices:
+      - text: "True"
+        correct: true
+        feedback: "Dereferencing `p` and immediately taking its address yields `p`."
+      - text: "False"
+        correct: false
+        feedback: "`&` and `*` are inverse operations for valid pointers."

@@ -8,6 +8,7 @@ import (
 	"qst-studio/internal/graph"
 	"qst-studio/internal/practice"
 	"qst-studio/internal/quiz"
+	"qst-studio/internal/quizzes"
 	"qst-studio/internal/workspace"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -23,9 +24,12 @@ type (
 	QuizChoiceDTO     = quiz.QuizChoiceDTO
 	BlankDTO          = quiz.BlankDTO
 	MatchingPairDTO   = quiz.MatchingPairDTO
-	QuizItemDTO         = quiz.QuizItemDTO
-	PracticeDeckOptions = quiz.PracticeDeckOptions
-	PracticeRecordDTO   = practice.PracticeRecordDTO
+	QuizItemDTO              = quiz.QuizItemDTO
+	PracticeDeckOptions      = quiz.PracticeDeckOptions
+	PracticeRecordDTO        = practice.PracticeRecordDTO
+	QuizPracticeRecordDTO    = practice.QuizPracticeRecordDTO
+	StandaloneQuizSummaryDTO = quizzes.StandaloneQuizSummaryDTO
+	StandaloneQuizDetailDTO  = quizzes.StandaloneQuizDetailDTO
 )
 
 // App struct bound to the Wails frontend.
@@ -175,4 +179,29 @@ func (a *App) GetPracticeRecord(dirPath string, itemID string) (*PracticeRecordD
 // RecordPracticeAttempt updates practice attempts and accuracy for a question.
 func (a *App) RecordPracticeAttempt(dirPath string, itemID string, guideID string, correct bool) error {
 	return practice.RecordAttempt(dirPath, itemID, guideID, correct)
+}
+
+// ListStandaloneQuizzes returns summaries for all standalone quizzes in <dirPath>/quizzes/.
+func (a *App) ListStandaloneQuizzes(dirPath string) ([]StandaloneQuizSummaryDTO, error) {
+	return quizzes.List(dirPath)
+}
+
+// GetStandaloneQuiz loads and validates a standalone quiz by ID from <dirPath>/quizzes/.
+func (a *App) GetStandaloneQuiz(dirPath string, quizID string) (*StandaloneQuizDetailDTO, error) {
+	return quizzes.Get(dirPath, quizID)
+}
+
+// GetQuizPracticeHistory returns all saved standalone quiz practice records.
+func (a *App) GetQuizPracticeHistory(dirPath string) (map[string]QuizPracticeRecordDTO, error) {
+	return practice.GetQuizHistory(dirPath)
+}
+
+// GetQuizPracticeRecord returns a practice record for a specific standalone quiz question.
+func (a *App) GetQuizPracticeRecord(dirPath string, quizID string, itemID string) (*QuizPracticeRecordDTO, error) {
+	return practice.GetQuizRecord(dirPath, quizID, itemID)
+}
+
+// RecordQuizAttempt updates practice attempts and accuracy for a standalone quiz question.
+func (a *App) RecordQuizAttempt(dirPath string, quizID string, itemID string, correct bool) error {
+	return practice.RecordQuizAttempt(dirPath, quizID, itemID, correct)
 }

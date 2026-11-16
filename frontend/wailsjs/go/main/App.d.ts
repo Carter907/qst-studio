@@ -3,6 +3,7 @@
 import {graph} from '../models';
 import {quiz} from '../models';
 import {practice} from '../models';
+import {quizzes} from '../models';
 
 export function DeleteQuizItem(arg1:string,arg2:string):Promise<void>;
 
@@ -18,13 +19,23 @@ export function GetPracticeRecord(arg1:string,arg2:string):Promise<practice.Prac
 
 export function GetQuizItems(arg1:string,arg2:string):Promise<Array<quiz.QuizItemDTO>>;
 
+export function GetQuizPracticeHistory(arg1:string):Promise<Record<string, practice.QuizPracticeRecordDTO>>;
+
+export function GetQuizPracticeRecord(arg1:string,arg2:string,arg3:string):Promise<practice.QuizPracticeRecordDTO>;
+
 export function GetRecentGraphs():Promise<Array<string>>;
 
+export function GetStandaloneQuiz(arg1:string,arg2:string):Promise<quizzes.StandaloneQuizDetailDTO>;
+
 export function GetSubtreePath(arg1:string,arg2:string):Promise<Array<string>>;
+
+export function ListStandaloneQuizzes(arg1:string):Promise<Array<quizzes.StandaloneQuizSummaryDTO>>;
 
 export function LoadGraph(arg1:string):Promise<graph.GraphDTO>;
 
 export function RecordPracticeAttempt(arg1:string,arg2:string,arg3:string,arg4:boolean):Promise<void>;
+
+export function RecordQuizAttempt(arg1:string,arg2:string,arg3:string,arg4:boolean):Promise<void>;
 
 export function SaveGuideContent(arg1:string,arg2:string):Promise<void>;
 
